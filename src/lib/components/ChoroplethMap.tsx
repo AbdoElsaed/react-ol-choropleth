@@ -22,8 +22,8 @@ import Feature from "ol/Feature";
 import Polygon from "ol/geom/Polygon";
 import chroma from "chroma-js";
 import Overlay from "ol/Overlay";
+import * as ReactDOM from "react-dom/client";
 import "../styles/choropleth.css";
-import ReactDOM from "react-dom";
 
 const DefaultOverlay = memo(
   ({
@@ -110,6 +110,7 @@ const ChoroplethMap = ({
     VectorSource<Feature<Geometry>>
   > | null>(null);
   const overlayInstanceRef = useRef<Overlay | null>(null);
+  const overlayRootRef = useRef<ReactDOM.Root | null>(null);
 
   // Create vector source only when data changes
   const vectorSource = useMemo(() => {
@@ -146,20 +147,33 @@ const ChoroplethMap = ({
         )
       ) : null;
 
-      // Use ReactDOM to render the content
+      // Clear previous content
+      if (overlayRootRef.current) {
+        overlayRootRef.current.unmount();
+        overlayRootRef.current = null;
+      }
+      overlayRef.current.innerHTML = "";
+
+      // Render new content if exists
       if (content) {
         const root = document.createElement("div");
         root.className = "react-ol-choropleth__overlay";
-        overlayRef.current.innerHTML = "";
         overlayRef.current.appendChild(root);
-        // @ts-ignore - we know ReactDOM.render exists
-        ReactDOM.render(content, root);
-      } else {
-        overlayRef.current.innerHTML = "";
+        overlayRootRef.current = ReactDOM.createRoot(root);
+        overlayRootRef.current.render(content);
       }
     },
     [overlayOptions]
   );
+
+  // Clean up overlay root on unmount
+  useEffect(() => {
+    return () => {
+      if (overlayRootRef.current) {
+        overlayRootRef.current.unmount();
+      }
+    };
+  }, []);
 
   // Handle feature click
   const handleFeatureClick = useCallback(
