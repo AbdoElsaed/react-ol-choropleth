@@ -19,9 +19,11 @@ import useColorScale from "../hooks/useColorScale";
 import Legend from "./Legend";
 import { Geometry } from "ol/geom";
 import Feature from "ol/Feature";
+import Polygon from "ol/geom/Polygon";
 import chroma from "chroma-js";
 import Overlay from "ol/Overlay";
 import "../styles/choropleth.css";
+import ReactDOM from "react-dom";
 
 const DefaultOverlay = memo(
   ({
@@ -89,9 +91,6 @@ const ChoroplethMap = ({
     positioning: "bottom-center",
     offset: [0, -10],
     autoPan: true,
-    autoPanAnimation: {
-      duration: 250,
-    },
   },
   zoomToFeature = false,
   selectedFeatureBorderColor = "#0099ff",
@@ -107,9 +106,6 @@ const ChoroplethMap = ({
   const [features, setFeatures] = useState<Feature<Geometry>[]>([]);
   const initialFitRef = useRef<boolean>(false);
   const selectedFeatureRef = useRef<FeatureLike | null>(null);
-  const [selectedFeature, setSelectedFeature] = useState<FeatureLike | null>(
-    null
-  );
   const vectorLayerRef = useRef<VectorLayer<
     VectorSource<Feature<Geometry>>
   > | null>(null);
@@ -138,6 +134,33 @@ const ChoroplethMap = ({
 
   const getColor = useColorScale({ data: features, valueProperty, colorScale });
 
+  const updateOverlayContent = useCallback(
+    (feature: FeatureLike | null) => {
+      if (!overlayRef.current || !overlayOptions) return;
+
+      const content = feature ? (
+        overlayOptions.render ? (
+          overlayOptions.render(feature)
+        ) : (
+          <DefaultOverlay feature={feature} />
+        )
+      ) : null;
+
+      // Use ReactDOM to render the content
+      if (content) {
+        const root = document.createElement("div");
+        root.className = "react-ol-choropleth__overlay";
+        overlayRef.current.innerHTML = "";
+        overlayRef.current.appendChild(root);
+        // @ts-ignore - we know ReactDOM.render exists
+        ReactDOM.render(content, root);
+      } else {
+        overlayRef.current.innerHTML = "";
+      }
+    },
+    [overlayOptions]
+  );
+
   // Handle feature click
   const handleFeatureClick = useCallback(
     (event: any, map: Map) => {
@@ -146,63 +169,58 @@ const ChoroplethMap = ({
         (feature) => feature
       );
 
-      // Update selected feature state regardless of overlay
+      // Update selected feature ref
       selectedFeatureRef.current = feature || null;
-      setSelectedFeature(feature || null);
-
-      // Force vector layer to refresh styles
-      if (vectorLayerRef.current) {
-        const source = vectorLayerRef.current.getSource();
-        if (source) {
-          source.changed();
-        }
-      }
 
       if (feature) {
         const geometry = feature.getGeometry();
-        if (geometry) {
-          // Get the centroid of the feature
-          const extent = geometry.getExtent();
-          const centerCoordinate = [
-            (extent[0] + extent[2]) / 2,
-            (extent[1] + extent[3]) / 2
-          ];
+        if (geometry instanceof Polygon) {
+          const centroid = geometry.getInteriorPoint().getCoordinates();
 
-          // Convert map coordinates to pixel coordinates
-          const pixel = map.getPixelFromCoordinate(centerCoordinate);
-          
-          // Only set overlay position if overlay exists
-          if (overlayInstanceRef.current && pixel) {
-            // Convert back to map coordinates but use the pixel's position
-            overlayInstanceRef.current.setPosition(
-              map.getCoordinateFromPixel([pixel[0], pixel[1]])
-            );
+          // Update overlay content and position
+          updateOverlayContent(feature);
+          if (overlayInstanceRef.current) {
+            overlayInstanceRef.current.setPosition(centroid);
           }
 
           if (onFeatureClick) {
-            onFeatureClick(feature, centerCoordinate as [number, number]);
+            onFeatureClick(feature, centroid as [number, number]);
           }
 
-          // Only zoom/fit to feature if the flag is true
-          if (zoomToFeature) {
-            map.getView().fit(geometry.getExtent(), {
-              padding: [100, 100, 100, 100],
-              duration: 1000,
-              maxZoom: 8,
+          // Zoom to centroid with better animation
+          if (zoomToFeature && mapInstanceRef.current) {
+            const view = mapInstanceRef.current.getView();
+            const extent = geometry.getExtent();
+            const resolution = view.getResolutionForExtent(
+              extent,
+              mapInstanceRef.current.getSize() || undefined
+            );
+            const zoom = view.getZoomForResolution(resolution || 1);
+
+            view.animate({
+              center: centroid,
+              zoom: zoom ? Math.min(zoom + 0.5, 6) : 6,
+              duration: 500,
             });
+          }
+
+          // Force vector layer to refresh styles
+          if (vectorLayerRef.current) {
+            vectorLayerRef.current.changed();
           }
         }
       } else {
-        // Clear overlay position if it exists
+        // Clear overlay
+        updateOverlayContent(null);
         if (overlayInstanceRef.current) {
           overlayInstanceRef.current.setPosition(undefined);
         }
         if (onFeatureClick) {
-          onFeatureClick(null, [0, 0]);
+          onFeatureClick(null);
         }
       }
     },
-    [onFeatureClick, zoomToFeature]
+    [onFeatureClick, zoomToFeature, updateOverlayContent]
   );
 
   // Style function that uses the ref for selected feature
@@ -272,11 +290,21 @@ const ChoroplethMap = ({
     if (overlayRef.current) {
       const overlayInstance = new Overlay({
         element: overlayRef.current,
-        positioning: "center-center",
+        positioning:
+          overlayOptions && "positioning" in overlayOptions
+            ? overlayOptions.positioning
+            : "bottom-center",
+        offset:
+          overlayOptions && "offset" in overlayOptions
+            ? overlayOptions.offset
+            : [0, -10],
         stopEvent: false,
-        offset: [0, -20], // Small offset to position above the feature
-        className: "ol-overlay-container ol-selectable",
-        autoPan: true
+        className:
+          "ol-overlay-container ol-selectable react-ol-choropleth__overlay-wrapper",
+        autoPan:
+          overlayOptions && "autoPan" in overlayOptions
+            ? overlayOptions.autoPan
+            : true,
       });
       overlayInstanceRef.current = overlayInstance;
       map.addOverlay(overlayInstance);
@@ -297,6 +325,9 @@ const ChoroplethMap = ({
     }
 
     return () => {
+      if (overlayRef.current) {
+        overlayRef.current.innerHTML = "";
+      }
       map.un("click", clickListener);
       map.dispose();
       initialFitRef.current = false;
@@ -309,6 +340,8 @@ const ChoroplethMap = ({
     handleFeatureClick,
     onFeatureHover,
     zoom,
+    overlayOptions,
+    updateOverlayContent,
   ]);
 
   // Update zoom when it changes
@@ -325,15 +358,6 @@ const ChoroplethMap = ({
       .filter((value) => !isNaN(value));
   }, [features, valueProperty]);
 
-  const overlayContent = useMemo(() => {
-    if (!overlayOptions || !selectedFeature) return null;
-    return overlayOptions.render ? (
-      overlayOptions.render(selectedFeature)
-    ) : (
-      <DefaultOverlay feature={selectedFeature} />
-    );
-  }, [overlayOptions, selectedFeature]);
-
   return (
     <div className={`react-ol-choropleth ${className}`.trim()}>
       <div
@@ -343,10 +367,7 @@ const ChoroplethMap = ({
       <div
         ref={overlayRef}
         className={`react-ol-choropleth__overlay-container ${overlayClassName}`.trim()}
-        style={{ display: selectedFeature ? "block" : "none" }}
-      >
-        {overlayContent}
-      </div>
+      />
       {showLegend && colorScale && values.length > 0 && (
         <Legend
           colorScale={colorScale}
