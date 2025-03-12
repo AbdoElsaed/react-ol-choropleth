@@ -8,17 +8,17 @@ export default defineConfig({
   plugins: [
     react(),
     dts({
-      insertTypesEntry: true,
       include: ['src/lib'],
-      exclude: ['src/demo', '**/tests/**', '**/*.test.ts', '**/*.test.tsx']
+      exclude: ['src/demo', 'dist', 'node_modules'],
     })
   ],
   build: {
+    sourcemap: false,
     lib: {
       entry: resolve(__dirname, "src/lib/index.ts"),
       name: "ReactOLChoropleth",
-      fileName: (format) => `react-ol-choropleth.${format}.js`,
       formats: ["es", "umd"],
+      fileName: 'react-ol-choropleth',
     },
     rollupOptions: {
       external: ["react", "react-dom", "ol"],
@@ -28,13 +28,15 @@ export default defineConfig({
           "react-dom": "ReactDOM",
           ol: "ol",
         },
-        assetFileNames: (assetInfo) => {
-          return assetInfo.name === 'style.css' ? 'style.css' : `assets/${assetInfo.name}`;
-        }
+      },
+    },
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true
       }
     },
-    sourcemap: true,
-    minify: true,
     cssCodeSplit: false
   },
   server: {
