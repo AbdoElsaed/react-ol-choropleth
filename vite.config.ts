@@ -18,7 +18,9 @@ export default defineConfig({
       entry: resolve(__dirname, "src/lib/index.ts"),
       name: "ReactOLChoropleth",
       formats: ["es", "umd"],
-      fileName: 'react-ol-choropleth',
+      fileName: (format) => {
+        return format === 'umd' ? 'react-ol-choropleth.umd.cjs' : 'react-ol-choropleth.js';
+      }
     },
     rollupOptions: {
       external: ["react", "react-dom", "ol"],
@@ -28,6 +30,12 @@ export default defineConfig({
           "react-dom": "ReactDOM",
           ol: "ol",
         },
+        assetFileNames: (assetInfo) => {
+          if (assetInfo.name === 'style.css') {
+            return 'react-ol-choropleth.css';
+          }
+          return `assets/${assetInfo.name}`;
+        }
       },
     },
     minify: 'terser',
