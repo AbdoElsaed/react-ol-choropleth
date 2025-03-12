@@ -22,7 +22,7 @@ import Feature from "ol/Feature";
 import Polygon from "ol/geom/Polygon";
 import chroma from "chroma-js";
 import Overlay from "ol/Overlay";
-import * as ReactDOM from "react-dom/client";
+import { createRoot, type Root } from "react-dom/client";
 import "../styles/choropleth.css";
 
 const DefaultOverlay = memo(
@@ -110,7 +110,7 @@ const ChoroplethMap = ({
     VectorSource<Feature<Geometry>>
   > | null>(null);
   const overlayInstanceRef = useRef<Overlay | null>(null);
-  const overlayRootRef = useRef<ReactDOM.Root | null>(null);
+  const overlayRootRef = useRef<Root | null>(null);
 
   // Create vector source only when data changes
   const vectorSource = useMemo(() => {
@@ -147,20 +147,31 @@ const ChoroplethMap = ({
         )
       ) : null;
 
-      // Clear previous content
-      if (overlayRootRef.current) {
-        overlayRootRef.current.unmount();
-        overlayRootRef.current = null;
-      }
-      overlayRef.current.innerHTML = "";
+      try {
+        // Clean up previous root
+        if (overlayRootRef.current) {
+          overlayRootRef.current.unmount();
+          overlayRootRef.current = null;
+        }
 
-      // Render new content if exists
-      if (content) {
-        const root = document.createElement("div");
-        root.className = "react-ol-choropleth__overlay";
-        overlayRef.current.appendChild(root);
-        overlayRootRef.current = ReactDOM.createRoot(root);
-        overlayRootRef.current.render(content);
+        // Clear the container
+        if (overlayRef.current) {
+          overlayRef.current.innerHTML = "";
+        }
+
+        // Create and render new content
+        if (content && overlayRef.current) {
+          const container = document.createElement("div");
+          container.className = "react-ol-choropleth__overlay";
+          overlayRef.current.appendChild(container);
+
+          // Create new root and render
+          const root = createRoot(container);
+          overlayRootRef.current = root;
+          root.render(content);
+        }
+      } catch (error) {
+        console.error("Error updating overlay content:", error);
       }
     },
     [overlayOptions]
