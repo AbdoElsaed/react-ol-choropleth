@@ -18,25 +18,57 @@ function App() {
   const geoData = {
     type: "FeatureCollection",
     features: [
-      // Your GeoJSON features
+      // Your GeoJSON features with properties like id, name, value
     ],
-  };
-
-  const data = {
-    "region-1": 75,
-    "region-2": 45,
-    // ... more data
   };
 
   return (
     <ChoroplethMap
-      geoData={geoData}
-      data={data}
-      idProperty="id"
-      valueProperty={(id) => data[id]}
+      // Required props
+      data={geoData}
+      valueProperty="population" // Property name in your GeoJSON features
+      // Color scale configuration
       colorScale={{
-        type: "quantile",
+        type: "sequential", // 'sequential' | 'diverging' | 'categorical'
         colors: ["#feedde", "#fdbe85", "#fd8d3c", "#e6550d", "#a63603"],
+      }}
+      // Map configuration
+      zoom={4}
+      baseMap="osm" // 'osm' | 'none'
+      // Legend configuration
+      showLegend={true}
+      legendPosition="top-right" // 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left'
+      // Interaction options
+      zoomToFeature={true}
+      selectedFeatureBorderColor="#0099ff"
+      // Custom overlay configuration
+      overlayOptions={{
+        render: (feature) => (
+          <div
+            style={{ background: "white", padding: "8px", borderRadius: "4px" }}
+          >
+            <h3>{feature.get("name")}</h3>
+            <p>Population: {feature.get("population").toLocaleString()}</p>
+          </div>
+        ),
+        positioning: "bottom-center",
+        offset: [0, -10],
+        autoPan: true,
+      }}
+      // Event handlers
+      onFeatureClick={(feature, coordinate) => {
+        if (feature) {
+          console.log("Clicked:", {
+            name: feature.get("name"),
+            value: feature.get("population"),
+            coordinate,
+          });
+        }
+      }}
+      onFeatureHover={(feature) => {
+        if (feature) {
+          console.log("Hovering:", feature.get("name"));
+        }
       }}
     />
   );
@@ -45,16 +77,20 @@ function App() {
 
 ## Props
 
-| Prop            | Type                               | Description                                          |
-| --------------- | ---------------------------------- | ---------------------------------------------------- |
-| `geoData`       | `GeoJSON`                          | GeoJSON data for map regions                         |
-| `data`          | `Record<string, number>`           | Data values for each region                          |
-| `idProperty`    | `string`                           | Property in GeoJSON features to match with data keys |
-| `valueProperty` | `string \| (id: string) => number` | Property or function to get values                   |
-| `colorScale`    | `ColorScaleConfig`                 | Configuration for color scale                        |
-| `center`        | `[number, number]`                 | Initial map center (optional)                        |
-| `zoom`          | `number`                           | Initial zoom level (optional)                        |
-| `legend`        | `LegendConfig`                     | Legend configuration (optional)                      |
+| Prop                         | Type                                                                | Description                                  |
+| ---------------------------- | ------------------------------------------------------------------- | -------------------------------------------- |
+| `data`                       | `GeoJSON \| Feature[]`                                              | GeoJSON data or array of OpenLayers features |
+| `valueProperty`              | `string`                                                            | Property name to use for coloring features   |
+| `colorScale`                 | `ColorScale`                                                        | Color scale configuration                    |
+| `zoom`                       | `number`                                                            | Initial zoom level (default: 2)              |
+| `showLegend`                 | `boolean`                                                           | Whether to show the legend (default: true)   |
+| `legendPosition`             | `LegendPosition`                                                    | Legend position (default: "top-right")       |
+| `baseMap`                    | `"osm" \| "none"`                                                   | Base map layer type (default: "osm")         |
+| `zoomToFeature`              | `boolean`                                                           | Auto-zoom on feature click (default: false)  |
+| `selectedFeatureBorderColor` | `string`                                                            | Selected feature highlight color             |
+| `overlayOptions`             | `OverlayOptions \| false`                                           | Custom overlay configuration                 |
+| `onFeatureClick`             | `(feature: Feature \| null, coordinate?: [number, number]) => void` | Click event handler                          |
+| `onFeatureHover`             | `(feature: Feature \| null) => void`                                | Hover event handler                          |
 
 ## Demo
 
