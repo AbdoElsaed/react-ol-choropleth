@@ -40,6 +40,33 @@ export interface ColorScaleOptions {
     domain?: [number, number];
 }
 
+export interface OverlayOptions {
+    /**
+     * Custom render function for the overlay content
+     */
+    render?: (feature: FeatureLike) => React.ReactNode;
+
+    /**
+     * Positioning of the overlay relative to the feature
+     */
+    positioning?: 'bottom-center' | 'top-center' | 'center-center' | 'center-left' | 'center-right' | 'bottom-left' | 'bottom-right' | 'top-left' | 'top-right';
+
+    /**
+     * Offset in pixels from the positioning
+     */
+    offset?: [number, number];
+
+    /**
+     * Whether to auto pan the map to show the overlay when it's displayed
+     */
+    autoPan?: boolean;
+
+    /**
+     * Animation duration for auto pan in milliseconds
+     */
+    autoPanDuration?: number;
+}
+
 export interface ChoroplethMapProps {
     data: {
         type: string;
@@ -59,6 +86,19 @@ export interface ChoroplethMapProps {
     showLegend?: boolean;
     legendPosition?: LegendPosition;
     baseMap?: 'osm' | 'none';
-    onFeatureClick?: (feature: FeatureLike) => void;
+    onFeatureClick?: (feature: FeatureLike | null, coordinate: [number, number]) => void;
     onFeatureHover?: (feature: FeatureLike | null) => void;
+    /**
+     * Options for the feature overlay
+     */
+    overlayOptions?: OverlayOptions | false;
+    /**
+     * Whether to zoom to a feature when clicked
+     */
+    zoomToFeature?: boolean;
+    /**
+     * Color of the border when a feature is selected
+     * @default '#0099ff' (light blue)
+     */
+    selectedFeatureBorderColor?: string;
 } 

@@ -7,16 +7,8 @@ interface LegendProps {
   values: number[];
 }
 
-const positionStyles = {
-  "top-left": { top: 10, left: 10 },
-  "top-right": { top: 10, right: 10 },
-  "bottom-left": { bottom: 10, left: 10 },
-  "bottom-right": { bottom: 10, right: 10 },
-};
-
 const Legend: React.FC<LegendProps> = ({ colorScale, position, values }) => {
   const { type, colors, steps = 5 } = colorScale;
-  const [min, max] = [Math.min(...values), Math.max(...values)];
 
   const getLabels = () => {
     if (type === "categorical") {
@@ -33,19 +25,20 @@ const Legend: React.FC<LegendProps> = ({ colorScale, position, values }) => {
     });
   };
 
+  const [min, max] = [Math.min(...values), Math.max(...values)];
   const labels = getLabels();
   const legendColors =
     type === "categorical" ? colors.slice(0, labels.length) : colors;
 
   return (
     <div
+      className="legend-container"
+      data-position={position}
       style={{
-        position: "absolute",
-        ...positionStyles[position],
-        backgroundColor: "rgba(255, 255, 255, 0.9)",
+        backgroundColor: "rgba(45, 45, 45, 0.9)",
         padding: "10px",
         borderRadius: "4px",
-        boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+        boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
         fontSize: "12px",
       }}
     >
@@ -60,10 +53,11 @@ const Legend: React.FC<LegendProps> = ({ colorScale, position, values }) => {
               height: "20px",
               backgroundColor: color,
               marginRight: "8px",
-              border: "1px solid #ccc",
+              border: "1px solid #4d4d4d",
+              borderRadius: "2px",
             }}
           />
-          <span style={{ color: "#000" }}>{labels[i]}</span>
+          <span style={{ color: "#e0e0e0" }}>{labels[i]}</span>
         </div>
       ))}
     </div>
