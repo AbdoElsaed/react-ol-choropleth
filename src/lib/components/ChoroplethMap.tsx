@@ -89,7 +89,9 @@ const ChoroplethMap = ({
     positioning: "bottom-center",
     offset: [0, -10],
     autoPan: true,
-    autoPanDuration: 500,
+    autoPanAnimation: {
+      duration: 250,
+    },
   },
   zoomToFeature = false,
   selectedFeatureBorderColor = "#0099ff",
@@ -159,18 +161,20 @@ const ChoroplethMap = ({
       if (feature) {
         const geometry = feature.getGeometry();
         if (geometry) {
-          const coordinate = map.getCoordinateFromPixel(event.pixel) as [
-            number,
-            number
+          // Get the centroid of the feature for better overlay positioning
+          const extent = geometry.getExtent();
+          const centerCoordinate = [
+            (extent[0] + extent[2]) / 2,
+            (extent[1] + extent[3]) / 2,
           ];
 
           // Only set overlay position if overlay exists
           if (overlayInstanceRef.current) {
-            overlayInstanceRef.current.setPosition(coordinate);
+            overlayInstanceRef.current.setPosition(centerCoordinate);
           }
 
           if (onFeatureClick) {
-            onFeatureClick(feature, coordinate);
+            onFeatureClick(feature, centerCoordinate as [number, number]);
           }
 
           // Only zoom/fit to feature if the flag is true
@@ -237,6 +241,7 @@ const ChoroplethMap = ({
     const view = new View({
       zoom,
       center: [-10997148, 4569099],
+      projection: "EPSG:3857",
     });
 
     const map = new Map({
@@ -262,8 +267,10 @@ const ChoroplethMap = ({
       const overlayInstance = new Overlay({
         element: overlayRef.current,
         positioning: "bottom-center",
-        offset: [0, -15],
         stopEvent: false,
+        // Remove offset and positioning from OpenLayers overlay since we handle it in CSS
+        offset: [0, 0],
+        className: "ol-overlay-container ol-selectable",
       });
       overlayInstanceRef.current = overlayInstance;
       map.addOverlay(overlayInstance);

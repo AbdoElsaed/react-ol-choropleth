@@ -15,10 +15,19 @@
   position: absolute;
   pointer-events: none;
   z-index: 1;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  overflow: visible;
 }
 
 .react-ol-choropleth__overlay-container > * {
   pointer-events: auto;
+  position: absolute;
+  transform: translate(-50%, -100%);
+  left: 0;
+  top: 0;
 }
 
 .react-ol-choropleth__overlay {
@@ -27,6 +36,8 @@
   padding: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   min-width: 200px;
+  max-width: 300px;
+  word-wrap: break-word;
 }
 
 .react-ol-choropleth__overlay-property {

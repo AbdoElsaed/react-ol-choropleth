@@ -1,6 +1,7 @@
 import type { Style } from 'ol/style';
 import type { FeatureLike } from 'ol/Feature';
 import type { StyleLike } from 'ol/style/Style';
+import type { Positioning } from 'ol/Overlay';
 
 export type LegendPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 
@@ -62,7 +63,7 @@ export interface OverlayOptions {
     /**
      * Positioning of the overlay relative to the feature
      */
-    positioning?: 'bottom-center' | 'top-center' | 'center-center' | 'center-left' | 'center-right' | 'bottom-left' | 'bottom-right' | 'top-left' | 'top-right';
+    positioning?: Positioning;
 
     /**
      * Offset in pixels from the positioning
@@ -77,7 +78,9 @@ export interface OverlayOptions {
     /**
      * Animation duration for auto pan in milliseconds
      */
-    autoPanDuration?: number;
+    autoPanAnimation?: {
+        duration?: number;
+    };
 }
 
 export interface ChoroplethMapProps {
