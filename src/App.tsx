@@ -63,12 +63,6 @@ function App() {
   const [customGeoJSON, setCustomGeoJSON] = useState("");
   const [currentData, setCurrentData] = useState(usStatesData);
   const [valueProperty, setValueProperty] = useState("density");
-  const [showCodeSnippet, setShowCodeSnippet] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [copySuccess, setCopySuccess] = useState(false);
-  const [selectedFeature, setSelectedFeature] = useState<FeatureLike | null>(
-    null
-  );
   const [zoomToFeature, setZoomToFeature] = useState(false);
   const [selectedFeatureBorderColor, setSelectedFeatureBorderColor] =
     useState("#0099ff");
@@ -92,26 +86,6 @@ function App() {
       setValueProperty(availableProperties[0]);
     }
   }, [availableProperties, valueProperty]);
-
-  const handleScaleTypeChange = (type: ColorScaleType) => {
-    setScaleType(type);
-    // Reset to first color scheme of the new type
-    const firstScheme = Object.keys(schemes[type])[0];
-    setColorScheme(firstScheme);
-    setColorScale({
-      type,
-      colors: schemes[type][firstScheme as keyof (typeof schemes)[typeof type]],
-    });
-  };
-
-  const handleColorSchemeChange = (scheme: string) => {
-    setColorScheme(scheme);
-    setColorScale({
-      type: scaleType,
-      colors:
-        schemes[scaleType][scheme as keyof (typeof schemes)[typeof scaleType]],
-    });
-  };
 
   // Update colors when steps change
   useEffect(() => {
@@ -147,11 +121,9 @@ function App() {
       ) {
         setCustomGeoJSON(value);
         setCurrentData(parsedData);
-      } else {
-        console.error("Invalid GeoJSON format");
       }
     } catch (e) {
-      console.error("Invalid JSON:", e);
+      // Invalid JSON handling
     }
   }, []);
 
@@ -208,16 +180,6 @@ const YourComponent = () => {
     zoomToFeature,
     selectedFeatureBorderColor,
   ]);
-
-  const handleCopyCode = async () => {
-    try {
-      await navigator.clipboard.writeText(generateCodeSnippet());
-      setCopySuccess(true);
-      setTimeout(() => setCopySuccess(false), 2000);
-    } catch (err) {
-      console.error("Failed to copy code:", err);
-    }
-  };
 
   return (
     <ModalProvider>

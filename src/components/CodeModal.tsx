@@ -17,7 +17,7 @@ const CodeModal = ({ isOpen, onClose, codeSnippet }: CodeModalProps) => {
       setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 2000);
     } catch (err) {
-      console.error("Failed to copy code:", err);
+      // Copy failed handling
     }
   }, [codeSnippet]);
 

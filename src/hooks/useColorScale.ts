@@ -15,15 +15,14 @@ const createColorScale = (colors: string[]) => {
     const validColors = colors.map(color => chroma(color).hex());
     return chroma.scale(validColors);
   } catch (e) {
-    console.error('Invalid color in scale:', e);
-    return chroma.scale(['#f7fbff', '#4292c6']); // Default blue scale
+    // Fallback to default blue scale
+    return chroma.scale(['#f7fbff', '#4292c6']);
   }
 };
 
 export const useColorScale = ({ data, valueProperty, colorScale }: UseColorScaleOptions) => {
   return useMemo(() => {
     if (!colorScale || !data.length) {
-      console.log('No color scale or data:', { colorScale, dataLength: data.length });
       return () => '#cccccc';
     }
 
@@ -37,13 +36,11 @@ export const useColorScale = ({ data, valueProperty, colorScale }: UseColorScale
       .sort((a, b) => a - b);
 
     if (!values.length) {
-      console.log('No valid values found');
       return () => '#cccccc';
     }
 
     const min = values[0];
     const max = values[values.length - 1];
-    console.log('Values range:', min, 'to', max);
 
     const { type, colors } = colorScale;
     const scale = createColorScale(colors);
