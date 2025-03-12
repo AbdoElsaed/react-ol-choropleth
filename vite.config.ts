@@ -23,12 +23,18 @@ export default defineConfig({
       }
     },
     rollupOptions: {
-      external: ["react", "react-dom", "ol"],
+      external: [
+        'react',
+        'react-dom',
+        'react/jsx-runtime',
+        'ol'
+      ],
       output: {
         globals: {
           react: "React",
           "react-dom": "ReactDOM",
-          ol: "ol",
+          "react/jsx-runtime": "jsxRuntime",
+          ol: "ol"
         },
         assetFileNames: 'style.css'
       },
