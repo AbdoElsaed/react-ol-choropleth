@@ -15,22 +15,14 @@
   position: absolute;
   pointer-events: none;
   z-index: 1;
-  left: 0;
-  top: 0;
-  width: 0;
-  height: 0;
-  overflow: visible;
 }
 
 .react-ol-choropleth__overlay-container > * {
   pointer-events: auto;
-  position: absolute;
-  transform: translate(-50%, -100%);
-  left: 0;
-  top: 0;
 }
 
 .react-ol-choropleth__overlay {
+  position: relative;
   background-color: white;
   border-radius: 4px;
   padding: 8px;
@@ -38,6 +30,19 @@
   min-width: 200px;
   max-width: 300px;
   word-wrap: break-word;
+  transform: translate(-50%, -100%);
+  margin-top: -10px;
+}
+
+.react-ol-choropleth__overlay::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid white;
 }
 
 .react-ol-choropleth__overlay-property {

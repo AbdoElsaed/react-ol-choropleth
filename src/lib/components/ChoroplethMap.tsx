@@ -161,16 +161,22 @@ const ChoroplethMap = ({
       if (feature) {
         const geometry = feature.getGeometry();
         if (geometry) {
-          // Get the centroid of the feature for better overlay positioning
+          // Get the centroid of the feature
           const extent = geometry.getExtent();
           const centerCoordinate = [
             (extent[0] + extent[2]) / 2,
-            (extent[1] + extent[3]) / 2,
+            (extent[1] + extent[3]) / 2
           ];
 
+          // Convert map coordinates to pixel coordinates
+          const pixel = map.getPixelFromCoordinate(centerCoordinate);
+          
           // Only set overlay position if overlay exists
-          if (overlayInstanceRef.current) {
-            overlayInstanceRef.current.setPosition(centerCoordinate);
+          if (overlayInstanceRef.current && pixel) {
+            // Convert back to map coordinates but use the pixel's position
+            overlayInstanceRef.current.setPosition(
+              map.getCoordinateFromPixel([pixel[0], pixel[1]])
+            );
           }
 
           if (onFeatureClick) {
@@ -266,11 +272,11 @@ const ChoroplethMap = ({
     if (overlayRef.current) {
       const overlayInstance = new Overlay({
         element: overlayRef.current,
-        positioning: "bottom-center",
+        positioning: "center-center",
         stopEvent: false,
-        // Remove offset and positioning from OpenLayers overlay since we handle it in CSS
-        offset: [0, 0],
+        offset: [0, -20], // Small offset to position above the feature
         className: "ol-overlay-container ol-selectable",
+        autoPan: true
       });
       overlayInstanceRef.current = overlayInstance;
       map.addOverlay(overlayInstance);
