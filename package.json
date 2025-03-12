@@ -1,12 +1,13 @@
 {
   "name": "react-ol-choropleth",
-  "version": "0.0.4",
+  "version": "0.0.5-beta.1",
   "private": false,
   "description": "A React plugin for creating choropleth maps using OpenLayers",
   "type": "module",
   "main": "./dist/react-ol-choropleth.umd.cjs",
   "module": "./dist/react-ol-choropleth.js",
   "types": "./dist/index.d.ts",
+  "style": "./dist/style.css",
   "files": [
     "dist",
     "README.md",
@@ -19,7 +20,8 @@
       "require": "./dist/react-ol-choropleth.umd.cjs",
       "default": "./dist/react-ol-choropleth.js"
     },
-    "./style.css": "./dist/react-ol-choropleth.css"
+    "./dist/style.css": "./dist/style.css",
+    "./style.css": "./dist/style.css"
   },
   "scripts": {
     "dev": "cd demo && npm run dev",

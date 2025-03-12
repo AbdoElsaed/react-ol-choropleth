@@ -30,12 +30,7 @@ export default defineConfig({
           "react-dom": "ReactDOM",
           ol: "ol",
         },
-        assetFileNames: (assetInfo) => {
-          if (assetInfo.name === 'style.css') {
-            return 'react-ol-choropleth.css';
-          }
-          return `assets/${assetInfo.name}`;
-        }
+        assetFileNames: 'style.css'
       },
     },
     minify: 'terser',
