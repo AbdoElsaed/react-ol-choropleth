@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { ColorScale, ColorScaleType, LegendPosition } from "../types/map";
+import { ColorScaleType, LegendPosition } from "../types/map";
 import { useModal } from "../contexts/ModalContext";
 
 interface ControlsProps {
@@ -17,7 +17,6 @@ interface ControlsProps {
   setScaleType: (type: ColorScaleType) => void;
   colorScheme: string;
   setColorScheme: (scheme: string) => void;
-  colorScale: ColorScale;
   customGeoJSON: string;
   handleGeoJSONInput: (value: string) => void;
   resetToDefaultData: () => void;
@@ -49,7 +48,6 @@ const Controls = memo(
     setScaleType,
     colorScheme,
     setColorScheme,
-    colorScale,
     customGeoJSON,
     handleGeoJSONInput,
     resetToDefaultData,

@@ -117,10 +117,6 @@ const YourComponent = () => {
           setScaleType={setScaleType}
           colorScheme={colorScheme}
           setColorScheme={setColorScheme}
-          colorScale={{
-            type: scaleType,
-            colors: schemes[scaleType][colorScheme].slice(0, steps),
-          }}
           customGeoJSON={customGeoJSON}
           handleGeoJSONInput={handleGeoJSONInput}
           resetToDefaultData={resetToDefaultData}
