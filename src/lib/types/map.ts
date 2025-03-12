@@ -1,8 +1,6 @@
 import type { Style } from 'ol/style';
 import type { FeatureLike } from 'ol/Feature';
-import type { Feature } from 'ol';
-import type { Geometry } from 'ol/geom';
-import GeoJSONFormat from 'ol/format/GeoJSON';
+import type { StyleLike } from 'ol/style/Style';
 
 export type LegendPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 
@@ -40,6 +38,21 @@ export interface ColorScaleOptions {
     domain?: [number, number];
 }
 
+export interface GeoJSONFeature {
+    type: string;
+    id?: string;
+    properties: Record<string, any>;
+    geometry: {
+        type: string;
+        coordinates: any[];
+    };
+}
+
+export interface GeoJSONFeatureCollection {
+    type: string;
+    features: GeoJSONFeature[];
+}
+
 export interface OverlayOptions {
     /**
      * Custom render function for the overlay content
@@ -68,37 +81,32 @@ export interface OverlayOptions {
 }
 
 export interface ChoroplethMapProps {
-    data: {
-        type: string;
-        features: Array<{
-            type: string;
-            properties: Record<string, any>;
-            geometry: {
-                type: string;
-                coordinates: number[][][] | number[][][][];
-            };
-        }>;
-    };
+    /** GeoJSON data or array of OpenLayers features to display on the map */
+    data: FeatureLike[] | GeoJSONFeatureCollection;
+    /** Property name in the GeoJSON features to use for coloring */
     valueProperty: string;
+    /** Configuration for the color scale */
     colorScale: ColorScale;
-    style?: (feature: FeatureLike) => Style;
+    /** Custom style function for features */
+    style?: Style | StyleLike;
+    /** Initial center coordinates [longitude, latitude] */
+    center?: [number, number];
+    /** Initial zoom level */
     zoom?: number;
-    showLegend?: boolean;
-    legendPosition?: LegendPosition;
+    /** Base map layer type */
     baseMap?: 'osm' | 'none';
-    onFeatureClick?: (feature: FeatureLike | null, coordinate: [number, number]) => void;
-    onFeatureHover?: (feature: FeatureLike | null) => void;
-    /**
-     * Options for the feature overlay
-     */
+    /** Whether to show the legend */
+    showLegend?: boolean;
+    /** Position of the legend */
+    legendPosition?: LegendPosition;
+    /** Options for the feature overlay */
     overlayOptions?: OverlayOptions | false;
-    /**
-     * Whether to zoom to a feature when clicked
-     */
+    /** Whether to zoom to a feature when clicked */
     zoomToFeature?: boolean;
-    /**
-     * Color of the border when a feature is selected
-     * @default '#0099ff' (light blue)
-     */
+    /** Border color for selected features */
     selectedFeatureBorderColor?: string;
+    /** Callback when a feature is clicked */
+    onFeatureClick?: (feature: FeatureLike | null, coordinate?: [number, number]) => void;
+    /** Callback when hovering over a feature */
+    onFeatureHover?: (feature: FeatureLike | null) => void;
 } 

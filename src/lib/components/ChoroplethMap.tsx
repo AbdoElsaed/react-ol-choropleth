@@ -7,7 +7,13 @@ import VectorSource from "ol/source/Vector";
 import OSM from "ol/source/OSM";
 import GeoJSON from "ol/format/GeoJSON";
 import { Style, Fill, Stroke } from "ol/style";
-import type { ChoroplethMapProps } from "../types/map";
+import type { StyleLike } from "ol/style/Style";
+import type {
+  ColorScale,
+  GeoJSONFeatureCollection,
+  OverlayOptions,
+  LegendPosition,
+} from "../types/map";
 import type { FeatureLike } from "ol/Feature";
 import useColorScale from "../hooks/useColorScale";
 import Legend from "./Legend";
@@ -15,28 +21,58 @@ import { Geometry } from "ol/geom";
 import Feature from "ol/Feature";
 import chroma from "chroma-js";
 import Overlay from "ol/Overlay";
+import "../styles/choropleth.css";
 
-const DefaultOverlay = memo(({ feature }: { feature: FeatureLike }) => {
-  const properties = feature.getProperties();
-  return (
-    <div className="feature-overlay">
-      <div className="feature-overlay-header">
-        <h3>Feature Properties</h3>
-      </div>
-      <div className="feature-overlay-content">
+const DefaultOverlay = memo(
+  ({
+    feature,
+    className = "",
+  }: {
+    feature: FeatureLike;
+    className?: string;
+  }) => {
+    const properties = feature.getProperties();
+    return (
+      <div className={`react-ol-choropleth__overlay ${className}`.trim()}>
         {Object.entries(properties)
           .filter(([key]) => key !== "geometry")
           .map(([key, value]) => (
-            <div key={key} className="property-row">
+            <div key={key} className="react-ol-choropleth__overlay-property">
               <strong>{key}:</strong> {String(value)}
             </div>
           ))}
       </div>
-    </div>
-  );
-});
+    );
+  }
+);
 
 DefaultOverlay.displayName = "DefaultOverlay";
+
+type BaseChoroplethMapProps = {
+  data: FeatureLike[] | GeoJSONFeatureCollection;
+  valueProperty: string;
+  colorScale: ColorScale;
+  style?: Style | StyleLike;
+  zoom?: number;
+  baseMap?: "osm" | "none";
+  showLegend?: boolean;
+  legendPosition?: LegendPosition;
+  onFeatureClick?: (
+    feature: FeatureLike | null,
+    coordinate?: [number, number]
+  ) => void;
+  onFeatureHover?: (feature: FeatureLike | null) => void;
+  overlayOptions?: OverlayOptions | false;
+  zoomToFeature?: boolean;
+  selectedFeatureBorderColor?: string;
+};
+
+interface ExtendedChoroplethMapProps extends BaseChoroplethMapProps {
+  className?: string;
+  mapClassName?: string;
+  overlayClassName?: string;
+  legendClassName?: string;
+}
 
 const ChoroplethMap = ({
   data,
@@ -57,7 +93,11 @@ const ChoroplethMap = ({
   },
   zoomToFeature = false,
   selectedFeatureBorderColor = "#0099ff",
-}: ChoroplethMapProps) => {
+  className = "",
+  mapClassName = "",
+  overlayClassName = "",
+  legendClassName = "",
+}: ExtendedChoroplethMapProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<Map | null>(null);
@@ -71,27 +111,23 @@ const ChoroplethMap = ({
   const vectorLayerRef = useRef<VectorLayer<
     VectorSource<Feature<Geometry>>
   > | null>(null);
-
-  // Create and manage overlay instance
-  const overlay = useMemo(() => {
-    if (!overlayOptions || !overlayRef.current) return null;
-
-    return new Overlay({
-      element: overlayRef.current,
-      positioning: overlayOptions.positioning || "bottom-center",
-      offset: overlayOptions.offset || [0, -10],
-      stopEvent: true,
-    });
-  }, [overlayOptions]);
+  const overlayInstanceRef = useRef<Overlay | null>(null);
 
   // Create vector source only when data changes
   const vectorSource = useMemo(() => {
-    const source = new VectorSource<Feature<Geometry>>({
-      features: new GeoJSON().readFeatures(data, {
+    const source = new VectorSource<Feature<Geometry>>();
+
+    if (Array.isArray(data)) {
+      source.addFeatures(data as Feature<Geometry>[]);
+    } else {
+      const geoJSON = new GeoJSON();
+      const features = geoJSON.readFeatures(data, {
         featureProjection: "EPSG:3857",
         dataProjection: "EPSG:4326",
-      }) as Feature<Geometry>[],
-    });
+      }) as Feature<Geometry>[];
+      source.addFeatures(features);
+    }
+
     const loadedFeatures = source.getFeatures();
     vectorSourceRef.current = source;
     setFeatures(loadedFeatures);
@@ -99,6 +135,65 @@ const ChoroplethMap = ({
   }, [data]);
 
   const getColor = useColorScale({ data: features, valueProperty, colorScale });
+
+  // Handle feature click
+  const handleFeatureClick = useCallback(
+    (event: any, map: Map) => {
+      const feature = map.forEachFeatureAtPixel(
+        event.pixel,
+        (feature) => feature
+      );
+
+      // Update selected feature state regardless of overlay
+      selectedFeatureRef.current = feature || null;
+      setSelectedFeature(feature || null);
+
+      // Force vector layer to refresh styles
+      if (vectorLayerRef.current) {
+        const source = vectorLayerRef.current.getSource();
+        if (source) {
+          source.changed();
+        }
+      }
+
+      if (feature) {
+        const geometry = feature.getGeometry();
+        if (geometry) {
+          const coordinate = map.getCoordinateFromPixel(event.pixel) as [
+            number,
+            number
+          ];
+
+          // Only set overlay position if overlay exists
+          if (overlayInstanceRef.current) {
+            overlayInstanceRef.current.setPosition(coordinate);
+          }
+
+          if (onFeatureClick) {
+            onFeatureClick(feature, coordinate);
+          }
+
+          // Only zoom/fit to feature if the flag is true
+          if (zoomToFeature) {
+            map.getView().fit(geometry.getExtent(), {
+              padding: [100, 100, 100, 100],
+              duration: 1000,
+              maxZoom: 8,
+            });
+          }
+        }
+      } else {
+        // Clear overlay position if it exists
+        if (overlayInstanceRef.current) {
+          overlayInstanceRef.current.setPosition(undefined);
+        }
+        if (onFeatureClick) {
+          onFeatureClick(null, [0, 0]);
+        }
+      }
+    },
+    [onFeatureClick, zoomToFeature]
+  );
 
   // Style function that uses the ref for selected feature
   const styleFunction = useCallback(
@@ -115,69 +210,11 @@ const ChoroplethMap = ({
         }),
         stroke: new Stroke({
           color: isSelected ? [...selectedColor, 1] : [61, 61, 61, 1],
-          width: isSelected ? 4 : 1,
+          width: isSelected ? 3 : 1,
         }),
       });
     },
     [getColor, valueProperty, selectedFeatureBorderColor]
-  );
-
-  // Handle feature click
-  const handleFeatureClick = useCallback(
-    (event: any, map: Map) => {
-      const feature = map.forEachFeatureAtPixel(
-        event.pixel,
-        (feature) => feature
-      );
-
-      if (feature && overlay) {
-        const geometry = feature.getGeometry();
-        if (geometry) {
-          const extent = geometry.getExtent();
-          const centerCoordinate: [number, number] = [
-            (extent[0] + extent[2]) / 2,
-            (extent[1] + extent[3]) / 2,
-          ];
-
-          overlay.setPosition(centerCoordinate);
-          selectedFeatureRef.current = feature;
-          setSelectedFeature(feature);
-
-          // Force redraw of the vector layer to update styles
-          if (vectorLayerRef.current) {
-            vectorLayerRef.current.changed();
-          }
-
-          if (onFeatureClick) {
-            onFeatureClick(feature, centerCoordinate);
-          }
-
-          // Only zoom/fit to feature if the flag is true
-          if (zoomToFeature) {
-            map.getView().fit(extent, {
-              padding: [100, 100, 100, 100],
-              duration: 1000,
-              maxZoom: 8,
-            });
-          }
-        }
-      } else {
-        if (overlay) {
-          overlay.setPosition(undefined);
-          selectedFeatureRef.current = null;
-          setSelectedFeature(null);
-
-          // Force redraw of the vector layer to update styles
-          if (vectorLayerRef.current) {
-            vectorLayerRef.current.changed();
-          }
-        }
-        if (onFeatureClick) {
-          onFeatureClick(null, [0, 0]);
-        }
-      }
-    },
-    [overlay, onFeatureClick, zoomToFeature]
   );
 
   // Effect for initial map setup
@@ -187,6 +224,8 @@ const ChoroplethMap = ({
     const vectorLayer = new VectorLayer({
       source: vectorSource,
       style: style || styleFunction,
+      updateWhileAnimating: true,
+      updateWhileInteracting: true,
     });
     vectorLayerRef.current = vectorLayer;
 
@@ -204,7 +243,6 @@ const ChoroplethMap = ({
       target: mapRef.current,
       layers,
       view,
-      overlays: overlay ? [overlay] : undefined,
     });
 
     // Only fit the view to the extent once on initial load
@@ -218,6 +256,18 @@ const ChoroplethMap = ({
     }
 
     mapInstanceRef.current = map;
+
+    // Create overlay after map is initialized
+    if (overlayRef.current) {
+      const overlayInstance = new Overlay({
+        element: overlayRef.current,
+        positioning: "bottom-center",
+        offset: [0, -15],
+        stopEvent: false,
+      });
+      overlayInstanceRef.current = overlayInstance;
+      map.addOverlay(overlayInstance);
+    }
 
     // Set up click handler
     const clickListener = (event: any) => handleFeatureClick(event, map);
@@ -246,7 +296,6 @@ const ChoroplethMap = ({
     handleFeatureClick,
     onFeatureHover,
     zoom,
-    overlay,
   ]);
 
   // Update zoom when it changes
@@ -273,18 +322,24 @@ const ChoroplethMap = ({
   }, [overlayOptions, selectedFeature]);
 
   return (
-    <div style={{ position: "relative", width: "100%", height: "100%" }}>
-      <div ref={mapRef} style={{ width: "100%", height: "100%" }} />
-      {overlayOptions && (
-        <div ref={overlayRef} className="ol-overlay-container">
-          {overlayContent}
-        </div>
-      )}
+    <div className={`react-ol-choropleth ${className}`.trim()}>
+      <div
+        ref={mapRef}
+        className={`react-ol-choropleth__map ${mapClassName}`.trim()}
+      />
+      <div
+        ref={overlayRef}
+        className={`react-ol-choropleth__overlay-container ${overlayClassName}`.trim()}
+        style={{ display: selectedFeature ? "block" : "none" }}
+      >
+        {overlayContent}
+      </div>
       {showLegend && colorScale && values.length > 0 && (
         <Legend
           colorScale={colorScale}
           position={legendPosition}
           values={values}
+          className={legendClassName}
         />
       )}
     </div>

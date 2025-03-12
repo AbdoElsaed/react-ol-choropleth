@@ -28,10 +28,7 @@ export const useColorScale = ({ data, valueProperty, colorScale }: UseColorScale
 
     // Extract values from features
     const values = data
-      .map(feature => {
-        const value = Number(feature.get(valueProperty));
-        return value;
-      })
+      .map(feature => Number(feature.get(valueProperty)))
       .filter(value => !isNaN(value))
       .sort((a, b) => a - b);
 
@@ -58,7 +55,7 @@ export const useColorScale = ({ data, valueProperty, colorScale }: UseColorScale
           if (isNaN(value)) return '#cccccc';
           
           // Find which break interval the value falls into
-          const breakIndex = breaks.findIndex((b, i) => 
+          const breakIndex = breaks.findIndex((_, i) => 
             value >= breaks[i] && (i === breaks.length - 1 || value < breaks[i + 1])
           );
           
@@ -93,7 +90,6 @@ export const useColorScale = ({ data, valueProperty, colorScale }: UseColorScale
 
       case 'categorical': {
         const uniqueValues = Array.from(new Set(values));
-        const numCategories = Math.min(uniqueValues.length, colors.length);
         
         return (value: number) => {
           if (isNaN(value)) return '#cccccc';

@@ -4,34 +4,40 @@ import { resolve } from 'path'
 import dts from 'vite-plugin-dts'
 
 // https://vitejs.dev/config/
-export default defineConfig(({ command }) => ({
+export default defineConfig({
   plugins: [
     react(),
     dts({
       insertTypesEntry: true,
-      include: ['src'],
-      exclude: ['src/demo']
+      include: ['src/lib'],
+      exclude: ['src/demo', '**/tests/**', '**/*.test.ts', '**/*.test.tsx']
     })
   ],
-  build: command === 'build' ? {
+  build: {
     lib: {
-      entry: resolve(__dirname, 'src/index.ts'),
-      name: 'ReactOLChoropleth',
+      entry: resolve(__dirname, "src/lib/index.ts"),
+      name: "ReactOLChoropleth",
       fileName: (format) => `react-ol-choropleth.${format}.js`,
-      formats: ['es', 'umd']
+      formats: ["es", "umd"],
     },
     rollupOptions: {
-      external: ['react', 'react-dom', 'ol'],
+      external: ["react", "react-dom", "ol"],
       output: {
         globals: {
-          react: 'React',
-          'react-dom': 'ReactDOM',
-          ol: 'ol'
+          react: "React",
+          "react-dom": "ReactDOM",
+          ol: "ol",
+        },
+        assetFileNames: (assetInfo) => {
+          return assetInfo.name === 'style.css' ? 'style.css' : `assets/${assetInfo.name}`;
         }
       }
-    }
-  } : undefined,
+    },
+    sourcemap: true,
+    minify: true,
+    cssCodeSplit: false
+  },
   server: {
     open: true
   }
-}))
+})

@@ -1,0 +1,119 @@
+/* Modal styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.modal-content {
+  background-color: #2d2d2d;
+  padding: 24px;
+  border-radius: 8px;
+  max-width: 90%;
+  width: 1000px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  z-index: 10001;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #3d3d3d;
+  padding-bottom: 20px;
+  flex-shrink: 0;
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #ffffff;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: #e0e0e0;
+  font-size: 24px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.modal-close:hover {
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.modal-body {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+/* Code display */
+.code-snippet {
+  background-color: #1a1a1a;
+  padding: 20px;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-family: "Fira Code", "Consolas", monospace;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 0;
+  border: 1px solid #3d3d3d;
+}
+
+.code-editor {
+  height: 100%;
+  min-height: 400px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #3d3d3d;
+}
+
+/* Action buttons */
+.copy-button {
+  background-color: #4292c6;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: background-color 0.2s;
+  min-width: 70px;
+}
+
+.copy-button:hover {
+  background-color: #2171b5;
+}
+
+.copy-button.success {
+  background-color: #2ecc71;
+} 

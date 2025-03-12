@@ -1,0 +1,83 @@
+/* Core map container */
+.react-ol-choropleth {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.react-ol-choropleth__map {
+  width: 100%;
+  height: 100%;
+}
+
+/* Overlay styles */
+.react-ol-choropleth__overlay-container {
+  position: absolute;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.react-ol-choropleth__overlay-container > * {
+  pointer-events: auto;
+}
+
+.react-ol-choropleth__overlay {
+  background-color: white;
+  border-radius: 4px;
+  padding: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  min-width: 200px;
+}
+
+.react-ol-choropleth__overlay-property {
+  margin: 4px 0;
+}
+
+/* Legend styles */
+.react-ol-choropleth__legend {
+  position: absolute;
+  background-color: white;
+  padding: 8px;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  font-size: 12px;
+  z-index: 1;
+}
+
+.react-ol-choropleth__legend[data-position="top-right"] {
+  top: 10px;
+  right: 10px;
+}
+
+.react-ol-choropleth__legend[data-position="top-left"] {
+  top: 10px;
+  left: 10px;
+}
+
+.react-ol-choropleth__legend[data-position="bottom-right"] {
+  bottom: 10px;
+  right: 10px;
+}
+
+.react-ol-choropleth__legend[data-position="bottom-left"] {
+  bottom: 10px;
+  left: 10px;
+}
+
+.react-ol-choropleth__legend-item {
+  display: flex;
+  align-items: center;
+  margin: 4px 0;
+}
+
+.react-ol-choropleth__legend-color {
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.react-ol-choropleth__legend-label {
+  font-size: 12px;
+  color: #333;
+}
