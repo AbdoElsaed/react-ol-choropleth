@@ -25,8 +25,6 @@ import Polygon from "ol/geom/Polygon";
 import chroma from "chroma-js";
 import Overlay from "ol/Overlay";
 import "../styles/choropleth.css";
-import ReactDOMServer from "react-dom/server";
-import { ReactElement } from "react";
 
 const generateOverlayContent = (feature: FeatureLike) => {
   const properties = feature.getProperties();
