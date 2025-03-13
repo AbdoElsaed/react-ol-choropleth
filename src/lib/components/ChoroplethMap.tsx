@@ -90,7 +90,6 @@ const ChoroplethMap = ({
   const overlayRef = useRef<Overlay | null>(null);
   const overlayContainerRef = useRef<HTMLDivElement | null>(null);
   const [features, setFeatures] = useState<Feature<Geometry>[]>([]);
-  const initialFitRef = useRef<boolean>(false);
   const selectedFeatureRef = useRef<FeatureLike | null>(null);
   const vectorLayerRef = useRef<VectorLayer<
     VectorSource<Feature<Geometry>>
