@@ -1,6 +1,6 @@
 {
   "name": "react-ol-choropleth",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": false,
   "description": "A React plugin for creating choropleth maps using OpenLayers",
   "type": "module",
