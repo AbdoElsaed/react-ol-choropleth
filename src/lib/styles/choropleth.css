@@ -11,11 +11,18 @@
 }
 
 /* Overlay styles */
+.react-ol-choropleth__overlay-container {
+  position: absolute;
+  z-index: 100;
+  pointer-events: none;
+}
+
 .react-ol-choropleth__overlay-wrapper {
   position: absolute;
   left: 0;
   top: 0;
   z-index: 100;
+  pointer-events: none;
 }
 
 .react-ol-choropleth__overlay {
@@ -31,6 +38,7 @@
   transform: translate(-50%, -100%);
   margin-top: -10px;
   color: #333;
+  pointer-events: auto;
 }
 
 .react-ol-choropleth__overlay::after {

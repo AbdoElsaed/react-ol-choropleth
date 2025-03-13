@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useMemo, memo, useCallback } from "react";
+import * as ReactDOM from "react-dom/client";
 import Map from "ol/Map";
 import View from "ol/View";
 import TileLayer from "ol/layer/Tile";
@@ -22,7 +23,6 @@ import Feature from "ol/Feature";
 import Polygon from "ol/geom/Polygon";
 import chroma from "chroma-js";
 import Overlay from "ol/Overlay";
-import { createRoot } from "react-dom/client";
 import "../styles/choropleth.css";
 
 const DefaultOverlay = memo(({ feature }: { feature: FeatureLike }) => {
@@ -165,20 +165,29 @@ const ChoroplethMap = ({
           const centroid = geometry.getInteriorPoint().getCoordinates();
 
           if (overlayRef.current.instance && overlayOptions) {
-            const content = overlayOptions.render ? (
-              overlayOptions.render(clickedFeature)
-            ) : (
-              <DefaultOverlay feature={clickedFeature} />
-            );
+            try {
+              const content = overlayOptions.render ? (
+                overlayOptions.render(clickedFeature)
+              ) : (
+                <DefaultOverlay feature={clickedFeature} />
+              );
 
-            // Update overlay content using React root
-            if (!overlayRef.current.root) {
-              const container = document.createElement("div");
-              overlayRef.current.root = createRoot(container);
-              overlayRef.current.instance.setElement(container);
+              // Create or update overlay content
+              if (!overlayRef.current.root) {
+                const container = document.createElement("div");
+                container.className = "react-ol-choropleth__overlay-container";
+                overlayRef.current.root = ReactDOM.createRoot(container);
+                overlayRef.current.instance.setElement(container);
+              }
+
+              // Render content
+              overlayRef.current.root.render(content);
+              overlayRef.current.instance.setPosition(centroid);
+            } catch (error) {
+              console.error("Error updating overlay:", error);
+              // Hide overlay on error
+              overlayRef.current.instance.setPosition(undefined);
             }
-            overlayRef.current.root.render(content);
-            overlayRef.current.instance.setPosition(centroid);
           }
 
           if (onFeatureClick) {
@@ -262,16 +271,24 @@ const ChoroplethMap = ({
 
     // Set up overlay if enabled
     if (overlayOptions) {
-      const overlayInstance = new Overlay({
-        positioning: overlayOptions.positioning || "bottom-center",
-        offset: overlayOptions.offset || [0, -10],
-        stopEvent: false,
-        className: "react-ol-choropleth__overlay-wrapper",
-        autoPan: overlayOptions.autoPan !== false,
-      });
+      try {
+        const container = document.createElement("div");
+        container.className = "react-ol-choropleth__overlay-container";
 
-      overlayRef.current.instance = overlayInstance;
-      map.addOverlay(overlayInstance);
+        const overlayInstance = new Overlay({
+          element: container,
+          positioning: overlayOptions.positioning || "bottom-center",
+          offset: overlayOptions.offset || [0, -10],
+          stopEvent: false,
+          className: "react-ol-choropleth__overlay-wrapper",
+          autoPan: overlayOptions.autoPan !== false,
+        });
+
+        overlayRef.current.instance = overlayInstance;
+        map.addOverlay(overlayInstance);
+      } catch (error) {
+        console.error("Error setting up overlay:", error);
+      }
     }
 
     // Set up click handler
@@ -289,30 +306,35 @@ const ChoroplethMap = ({
     }
 
     return () => {
-      // Cleanup React root if it exists
-      if (overlayRef.current.root) {
-        overlayRef.current.root.unmount();
-      }
+      try {
+        // Cleanup React root if it exists
+        if (overlayRef.current.root) {
+          overlayRef.current.root.unmount();
+        }
 
-      map.un("click", clickListener);
-      if (onFeatureHover) {
-        map.un("pointermove", (event) => {
-          const feature = map.forEachFeatureAtPixel(
-            event.pixel,
-            (feature) => feature
-          );
-          onFeatureHover(feature || null);
-        });
+        map.un("click", clickListener);
+        if (onFeatureHover) {
+          map.un("pointermove", (event) => {
+            const feature = map.forEachFeatureAtPixel(
+              event.pixel,
+              (feature) => feature
+            );
+            onFeatureHover(feature || null);
+          });
+        }
+        if (overlayRef.current.instance) {
+          map.removeOverlay(overlayRef.current.instance);
+        }
+        map.dispose();
+      } catch (error) {
+        console.error("Error cleaning up map:", error);
+      } finally {
+        initialFitRef.current = false;
+        selectedFeatureRef.current = null;
+        vectorLayerRef.current = null;
+        mapInstanceRef.current = null;
+        overlayRef.current = { instance: null, root: null };
       }
-      if (overlayRef.current.instance) {
-        map.removeOverlay(overlayRef.current.instance);
-      }
-      map.dispose();
-      initialFitRef.current = false;
-      selectedFeatureRef.current = null;
-      vectorLayerRef.current = null;
-      mapInstanceRef.current = null;
-      overlayRef.current = { instance: null, root: null };
     };
   }, [
     vectorSource,
