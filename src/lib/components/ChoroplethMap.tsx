@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useMemo, memo, useCallback } from "react";
+import { createPortal } from "react-dom";
 import Map from "ol/Map";
 import View from "ol/View";
 import TileLayer from "ol/layer/Tile";
@@ -29,15 +30,14 @@ import { ReactElement } from "react";
 
 const generateOverlayContent = (feature: FeatureLike) => {
   const properties = feature.getProperties();
-  return Object.entries(properties)
+  const content = Object.entries(properties)
     .filter(([key]) => key !== "geometry")
-    .map(
-      ([key, value]) =>
-        `<div class="react-ol-choropleth__overlay-property">
-        <strong>${key}:</strong> ${String(value)}
-      </div>`
-    )
-    .join("");
+    .map(([key, value]) => (
+      <div key={key} className="react-ol-choropleth__overlay-property">
+        <strong>{key}:</strong> {String(value)}
+      </div>
+    ));
+  return <div className="react-ol-choropleth__overlay">{content}</div>;
 };
 
 type BaseChoroplethMapProps = {
@@ -97,6 +97,9 @@ const ChoroplethMap = ({
   const vectorLayerRef = useRef<VectorLayer<
     VectorSource<Feature<Geometry>>
   > | null>(null);
+  const [overlayContent, setOverlayContent] = useState<React.ReactNode | null>(
+    null
+  );
 
   // Create vector source only when data changes
   const vectorSource = useMemo(() => {
@@ -151,7 +154,6 @@ const ChoroplethMap = ({
         (feature) => feature
       );
 
-      // Update selected feature
       selectedFeatureRef.current = clickedFeature || null;
 
       if (clickedFeature) {
@@ -163,19 +165,12 @@ const ChoroplethMap = ({
           overlayOptions
         ) {
           try {
-            let content = "";
-            if (overlayOptions.render) {
-              const result = overlayOptions.render(clickedFeature);
-              content =
-                typeof result === "string"
-                  ? result
-                  : ReactDOMServer.renderToString(result as ReactElement);
-            } else {
-              content = generateOverlayContent(clickedFeature);
-            }
+            // Set overlay content using React
+            const content = overlayOptions.render
+              ? overlayOptions.render(clickedFeature)
+              : generateOverlayContent(clickedFeature);
 
-            // Update content first
-            overlayContainerRef.current.innerHTML = `<div class="react-ol-choropleth__overlay">${content}</div>`;
+            setOverlayContent(content);
 
             // Get the top center coordinate of the feature
             const extent = geometry.getExtent();
@@ -209,12 +204,14 @@ const ChoroplethMap = ({
           } catch (error) {
             console.error("Error updating overlay:", error);
             overlayRef.current.setPosition(undefined);
+            setOverlayContent(null);
           }
         }
       } else {
         // Hide overlay when no feature is selected
         if (overlayRef.current) {
           overlayRef.current.setPosition(undefined);
+          setOverlayContent(null);
         }
         if (onFeatureClick) {
           onFeatureClick(null);
@@ -377,6 +374,9 @@ const ChoroplethMap = ({
           className={legendClassName}
         />
       )}
+      {overlayContent &&
+        overlayContainerRef.current &&
+        createPortal(overlayContent, overlayContainerRef.current)}
     </div>
   );
 };
