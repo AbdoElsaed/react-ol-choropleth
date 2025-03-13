@@ -152,7 +152,11 @@ const ChoroplethMap = ({
   // Cleanup function for overlay
   const cleanupOverlay = useCallback(() => {
     if (overlayRootRef.current) {
-      overlayRootRef.current.unmount();
+      try {
+        overlayRootRef.current.unmount();
+      } catch (error) {
+        console.warn("Error unmounting overlay root:", error);
+      }
       overlayRootRef.current = null;
     }
     if (overlayInstanceRef.current && mapInstanceRef.current) {
@@ -163,23 +167,32 @@ const ChoroplethMap = ({
 
   // Setup overlay
   const setupOverlay = useCallback(() => {
-    if (!overlayRef.current || !overlayOptions || !mapInstanceRef.current)
-      return;
+    if (!overlayRef.current || !overlayOptions || !mapInstanceRef.current) return;
 
     // Cleanup existing overlay first
     cleanupOverlay();
 
-    const overlayInstance = new Overlay({
-      element: overlayRef.current,
-      positioning: overlayOptions.positioning || "bottom-center",
-      offset: overlayOptions.offset || [0, -10],
-      stopEvent: false,
-      className: "react-ol-choropleth__overlay-wrapper",
-      autoPan: overlayOptions.autoPan !== false,
-    });
+    try {
+      const overlayInstance = new Overlay({
+        element: overlayRef.current,
+        positioning: overlayOptions.positioning || "bottom-center",
+        offset: overlayOptions.offset || [0, -10],
+        stopEvent: false,
+        className: "react-ol-choropleth__overlay-wrapper",
+        autoPan: overlayOptions.autoPan !== false,
+      });
 
-    overlayInstanceRef.current = overlayInstance;
-    mapInstanceRef.current.addOverlay(overlayInstance);
+      overlayInstanceRef.current = overlayInstance;
+      mapInstanceRef.current.addOverlay(overlayInstance);
+
+      // Create new root only if it doesn't exist
+      if (!overlayRootRef.current && overlayRef.current) {
+        overlayRootRef.current = createRoot(overlayRef.current);
+      }
+    } catch (error) {
+      console.warn("Error setting up overlay:", error);
+      cleanupOverlay();
+    }
   }, [overlayOptions, cleanupOverlay]);
 
   // Handle feature click with improved overlay management
@@ -199,31 +212,27 @@ const ChoroplethMap = ({
           const centroid = geometry.getInteriorPoint().getCoordinates();
 
           // Update overlay content and position
-          if (
-            overlayRef.current &&
-            overlayInstanceRef.current &&
-            overlayOptions
-          ) {
-            const content = overlayOptions.render ? (
-              overlayOptions.render(clickedFeature)
-            ) : (
-              <DefaultOverlay feature={clickedFeature} />
-            );
+          if (overlayRef.current && overlayInstanceRef.current && overlayOptions) {
+            try {
+              // Create root if it doesn't exist
+              if (!overlayRootRef.current && overlayRef.current) {
+                overlayRootRef.current = createRoot(overlayRef.current);
+              }
 
-            // Create or update overlay content
-            if (!overlayRootRef.current && overlayRef.current) {
-              overlayRootRef.current = createRoot(overlayRef.current);
-            }
+              const content = overlayOptions.render ? (
+                overlayOptions.render(clickedFeature)
+              ) : (
+                <DefaultOverlay feature={clickedFeature} />
+              );
 
-            if (overlayRootRef.current) {
-              try {
+              if (overlayRootRef.current) {
                 overlayRootRef.current.render(content);
                 overlayInstanceRef.current.setPosition(centroid);
-              } catch (error) {
-                console.warn("Error rendering overlay:", error);
-                cleanupOverlay();
-                setupOverlay();
               }
+            } catch (error) {
+              console.warn("Error rendering overlay:", error);
+              cleanupOverlay();
+              setupOverlay();
             }
           }
 
@@ -271,13 +280,7 @@ const ChoroplethMap = ({
         vectorLayerRef.current.changed();
       }
     },
-    [
-      onFeatureClick,
-      zoomToFeature,
-      overlayOptions,
-      cleanupOverlay,
-      setupOverlay,
-    ]
+    [onFeatureClick, zoomToFeature, overlayOptions, cleanupOverlay, setupOverlay]
   );
 
   // Effect for initial map setup
@@ -340,9 +343,21 @@ const ChoroplethMap = ({
 
     return () => {
       map.un("click", clickListener);
+      if (onFeatureHover) {
+        map.un("pointermove", (event) => {
+          const feature = map.forEachFeatureAtPixel(
+            event.pixel,
+            (feature) => feature
+          );
+          onFeatureHover(feature || null);
+        });
+      }
       cleanupOverlay();
       map.dispose();
       initialFitRef.current = false;
+      selectedFeatureRef.current = null;
+      vectorLayerRef.current = null;
+      mapInstanceRef.current = null;
     };
   }, [
     vectorSource,
