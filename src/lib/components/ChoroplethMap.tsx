@@ -23,6 +23,8 @@ import Polygon from "ol/geom/Polygon";
 import chroma from "chroma-js";
 import Overlay from "ol/Overlay";
 import "../styles/choropleth.css";
+import ReactDOMServer from "react-dom/server";
+import { ReactElement } from "react";
 
 const generateOverlayContent = (feature: FeatureLike) => {
   const properties = feature.getProperties();
@@ -166,7 +168,7 @@ const ChoroplethMap = ({
               content =
                 typeof result === "string"
                   ? result
-                  : generateOverlayContent(clickedFeature);
+                  : ReactDOMServer.renderToString(result as ReactElement);
             } else {
               content = generateOverlayContent(clickedFeature);
             }
@@ -176,10 +178,7 @@ const ChoroplethMap = ({
 
             // Get the top center coordinate of the feature
             const extent = geometry.getExtent();
-            const position = [
-              (extent[0] + extent[2]) / 2,
-              extent[3]
-            ];
+            const position = [(extent[0] + extent[2]) / 2, extent[3]];
 
             // Set position after content update
             requestAnimationFrame(() => {
@@ -291,10 +290,7 @@ const ChoroplethMap = ({
             const geometry = selectedFeatureRef.current.getGeometry();
             if (geometry instanceof Polygon) {
               const extent = geometry.getExtent();
-              const position = [
-                (extent[0] + extent[2]) / 2,
-                extent[3]
-              ];
+              const position = [(extent[0] + extent[2]) / 2, extent[3]];
               requestAnimationFrame(() => {
                 overlayInstance.setPosition(position);
               });
