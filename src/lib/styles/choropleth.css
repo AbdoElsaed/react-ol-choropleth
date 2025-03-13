@@ -13,14 +13,14 @@
 /* Reset OpenLayers default overlay styles */
 .ol-overlay-container {
   will-change: transform;
-  pointer-events: none !important;
+  pointer-events: auto !important;
   z-index: 100000;
 }
 
 /* Overlay Container */
 .react-ol-choropleth__overlay-container {
   position: absolute;
-  pointer-events: none;
+  pointer-events: auto;
   z-index: 100000;
   display: block !important;
   visibility: visible !important;
@@ -28,9 +28,10 @@
 
 /* Overlay Wrapper - OpenLayers adds this */
 .react-ol-choropleth__overlay-wrapper {
-  pointer-events: none !important;
+  pointer-events: auto !important;
   display: block !important;
   visibility: visible !important;
+  transform-origin: bottom center;
 }
 
 /* Default Overlay */
@@ -39,7 +40,7 @@
   border-radius: 4px;
   padding: 8px 12px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  pointer-events: none;
+  pointer-events: auto;
   font-size: 14px;
   line-height: 1.4;
   max-width: 300px;
@@ -49,6 +50,7 @@
   margin-top: -10px;
   display: block !important;
   visibility: visible !important;
+  color: #333;
 }
 
 .react-ol-choropleth__overlay::after {
