@@ -64,7 +64,6 @@ type BaseChoroplethMapProps = {
 interface ExtendedChoroplethMapProps extends BaseChoroplethMapProps {
   className?: string;
   mapClassName?: string;
-  overlayClassName?: string;
   legendClassName?: string;
 }
 
@@ -88,7 +87,6 @@ const ChoroplethMap = ({
   selectedFeatureBorderColor = "#0099ff",
   className = "",
   mapClassName = "",
-  overlayClassName = "",
   legendClassName = "",
 }: ExtendedChoroplethMapProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
