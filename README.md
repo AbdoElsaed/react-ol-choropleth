@@ -41,19 +41,17 @@ function App() {
       // Interaction options
       zoomToFeature={true}
       selectedFeatureBorderColor="#0099ff"
-      // Custom overlay configuration
+      // Custom overlay configuration (optional)
       overlayOptions={{
+        // Custom render function (optional)
         render: (feature) => (
-          <div
-            style={{ background: "white", padding: "8px", borderRadius: "4px" }}
-          >
+          <div>
             <h3>{feature.get("name")}</h3>
             <p>Population: {feature.get("population").toLocaleString()}</p>
           </div>
         ),
-        positioning: "bottom-center",
-        offset: [0, -10],
-        autoPan: true,
+        // If render is not provided, it will show all feature properties by default
+        autoPan: true, // Auto pan map to show overlay when feature is clicked
       }}
       // Event handlers
       onFeatureClick={(feature, coordinate) => {
@@ -77,20 +75,29 @@ function App() {
 
 ## Props
 
-| Prop                         | Type                                                                | Description                                  |
-| ---------------------------- | ------------------------------------------------------------------- | -------------------------------------------- |
-| `data`                       | `GeoJSON \| Feature[]`                                              | GeoJSON data or array of OpenLayers features |
-| `valueProperty`              | `string`                                                            | Property name to use for coloring features   |
-| `colorScale`                 | `ColorScale`                                                        | Color scale configuration                    |
-| `zoom`                       | `number`                                                            | Initial zoom level (default: 2)              |
-| `showLegend`                 | `boolean`                                                           | Whether to show the legend (default: true)   |
-| `legendPosition`             | `LegendPosition`                                                    | Legend position (default: "top-right")       |
-| `baseMap`                    | `"osm" \| "none"`                                                   | Base map layer type (default: "osm")         |
-| `zoomToFeature`              | `boolean`                                                           | Auto-zoom on feature click (default: false)  |
-| `selectedFeatureBorderColor` | `string`                                                            | Selected feature highlight color             |
-| `overlayOptions`             | `OverlayOptions \| false`                                           | Custom overlay configuration                 |
-| `onFeatureClick`             | `(feature: Feature \| null, coordinate?: [number, number]) => void` | Click event handler                          |
-| `onFeatureHover`             | `(feature: Feature \| null) => void`                                | Hover event handler                          |
+| Prop                         | Type                                                                | Description                                  | Default       |
+| ---------------------------- | ------------------------------------------------------------------- | -------------------------------------------- | ------------- |
+| `data`                       | `GeoJSON \| Feature[]`                                              | GeoJSON data or array of OpenLayers features | -             |
+| `valueProperty`              | `string`                                                            | Property name to use for coloring features   | -             |
+| `colorScale`                 | `ColorScale`                                                        | Color scale configuration                    | -             |
+| `zoom`                       | `number`                                                            | Initial zoom level                           | `2`           |
+| `showLegend`                 | `boolean`                                                           | Whether to show the legend                   | `true`        |
+| `legendPosition`             | `LegendPosition`                                                    | Legend position                              | `"top-right"` |
+| `baseMap`                    | `"osm" \| "none"`                                                   | Base map layer type                          | `"osm"`       |
+| `zoomToFeature`              | `boolean`                                                           | Auto-zoom on feature click                   | `false`       |
+| `selectedFeatureBorderColor` | `string`                                                            | Selected feature highlight color             | `"#0099ff"`   |
+| `overlayOptions`             | `OverlayOptions \| false`                                           | Custom overlay configuration                 | See below     |
+| `onFeatureClick`             | `(feature: Feature \| null, coordinate?: [number, number]) => void` | Click event handler                          | -             |
+| `onFeatureHover`             | `(feature: Feature \| null) => void`                                | Hover event handler                          | -             |
+
+### Default Overlay Options
+
+```ts
+{
+  render: undefined, // Will show all feature properties if not provided
+  autoPan: true,
+}
+```
 
 ## Demo
 

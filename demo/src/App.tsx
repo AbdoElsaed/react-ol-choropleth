@@ -75,6 +75,7 @@ function App() {
 
   const generateCodeSnippet = () => {
     return `import { ChoroplethMap } from 'react-ol-choropleth';
+import 'react-ol-choropleth/style.css';
 
 const YourComponent = () => {
   return (
@@ -94,6 +95,16 @@ const YourComponent = () => {
       baseMap="${baseMap}"
       zoomToFeature={${zoomToFeature}}
       selectedFeatureBorderColor="${selectedFeatureBorderColor}"
+      overlayOptions={{
+        // Optional custom render function
+        render: (feature) => (
+          <div>
+            <h3>{feature.get("name")}</h3>
+            <p>{feature.get("${valueProperty}")}</p>
+          </div>
+        ),
+        autoPan: true, // Auto pan map to show overlay
+      }}
     />
   );
 };`;
@@ -147,6 +158,9 @@ const YourComponent = () => {
             zoomToFeature={zoomToFeature}
             selectedFeatureBorderColor={selectedFeatureBorderColor}
             className="demo-choropleth"
+            overlayOptions={{
+              autoPan: true,
+            }}
           />
         </div>
       </div>
