@@ -160,7 +160,12 @@ const ChoroplethMap = ({
           overlayContainerRef.current &&
           overlayOptions
         ) {
-          const centroid = geometry.getInteriorPoint().getCoordinates();
+          // Get the centroid of the feature
+          const extent = geometry.getExtent();
+          const centroid = [
+            (extent[0] + extent[2]) / 2,
+            (extent[1] + extent[3]) / 2,
+          ];
 
           try {
             let content = "";
@@ -176,29 +181,36 @@ const ChoroplethMap = ({
 
             overlayContainerRef.current.innerHTML = `<div class="react-ol-choropleth__overlay">${content}</div>`;
             overlayRef.current.setPosition(centroid);
+
+            // Ensure overlay is visible after setting position
+            requestAnimationFrame(() => {
+              if (overlayRef.current) {
+                overlayRef.current.setPosition(centroid);
+              }
+            });
+
+            if (onFeatureClick) {
+              onFeatureClick(clickedFeature, centroid as [number, number]);
+            }
+
+            if (zoomToFeature && mapInstanceRef.current) {
+              const view = mapInstanceRef.current.getView();
+              const extent = geometry.getExtent();
+              const resolution = view.getResolutionForExtent(
+                extent,
+                mapInstanceRef.current.getSize() || undefined
+              );
+              const zoom = view.getZoomForResolution(resolution || 1);
+
+              view.animate({
+                center: centroid,
+                zoom: zoom ? Math.min(zoom + 0.5, 6) : 6,
+                duration: 500,
+              });
+            }
           } catch (error) {
             console.error("Error updating overlay:", error);
             overlayRef.current.setPosition(undefined);
-          }
-
-          if (onFeatureClick) {
-            onFeatureClick(clickedFeature, centroid as [number, number]);
-          }
-
-          if (zoomToFeature && mapInstanceRef.current) {
-            const view = mapInstanceRef.current.getView();
-            const extent = geometry.getExtent();
-            const resolution = view.getResolutionForExtent(
-              extent,
-              mapInstanceRef.current.getSize() || undefined
-            );
-            const zoom = view.getZoomForResolution(resolution || 1);
-
-            view.animate({
-              center: centroid,
-              zoom: zoom ? Math.min(zoom + 0.5, 6) : 6,
-              duration: 500,
-            });
           }
         }
       } else {
@@ -237,8 +249,6 @@ const ChoroplethMap = ({
     ];
 
     const view = new View({
-      zoom,
-      center: [-10997148, 4569099],
       projection: "EPSG:3857",
     });
 
@@ -248,15 +258,13 @@ const ChoroplethMap = ({
       view,
     });
 
-    // Only fit the view to the extent once on initial load
-    if (!initialFitRef.current) {
-      const extent = vectorSource.getExtent();
-      view.fit(extent, {
-        padding: [50, 50, 50, 50],
-        duration: 0,
-      });
-      initialFitRef.current = true;
-    }
+    // Fit view to the extent on initial load
+    const extent = vectorSource.getExtent();
+    view.fit(extent, {
+      padding: [50, 50, 50, 50],
+      maxZoom: zoom || undefined,
+      duration: 0,
+    });
 
     mapInstanceRef.current = map;
 
