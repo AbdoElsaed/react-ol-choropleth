@@ -15,6 +15,7 @@
   position: absolute;
   z-index: 100;
   pointer-events: none;
+  transform-origin: center bottom;
 }
 
 .react-ol-choropleth__overlay-wrapper {
@@ -23,6 +24,7 @@
   top: 0;
   z-index: 100;
   pointer-events: none;
+  transform-origin: center bottom;
 }
 
 .react-ol-choropleth__overlay {
@@ -39,11 +41,12 @@
   margin-top: -10px;
   color: #333;
   pointer-events: auto;
-  transition: transform 0.2s ease-out;
+  transform-origin: center bottom;
+  will-change: transform;
 }
 
 .react-ol-choropleth__overlay::after {
-  content: '';
+  content: "";
   position: absolute;
   left: 50%;
   bottom: -8px;

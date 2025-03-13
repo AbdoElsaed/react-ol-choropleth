@@ -177,12 +177,16 @@ const ChoroplethMap = ({
             // Get the top center coordinate of the feature
             const extent = geometry.getExtent();
             const position = [
-              (extent[0] + extent[2]) / 2, // Center X
-              extent[3], // Top Y
+              (extent[0] + extent[2]) / 2,
+              extent[3]
             ];
 
             // Set position after content update
-            overlayRef.current.setPosition(position);
+            requestAnimationFrame(() => {
+              if (overlayRef.current) {
+                overlayRef.current.setPosition(position);
+              }
+            });
 
             if (onFeatureClick) {
               onFeatureClick(clickedFeature, position as [number, number]);
@@ -271,8 +275,8 @@ const ChoroplethMap = ({
 
         const overlayInstance = new Overlay({
           element: container,
-          positioning: overlayOptions.positioning || "bottom-center",
-          offset: overlayOptions.offset || [0, -10],
+          positioning: "center-center",
+          offset: [0, 0],
           stopEvent: false,
           className: "react-ol-choropleth__overlay-wrapper",
           autoPan: overlayOptions.autoPan !== false,
@@ -282,16 +286,24 @@ const ChoroplethMap = ({
         map.addOverlay(overlayInstance);
 
         // Update overlay position on view change
-        view.on("change:resolution", () => {
+        const updateOverlayPosition = () => {
           if (selectedFeatureRef.current) {
             const geometry = selectedFeatureRef.current.getGeometry();
             if (geometry instanceof Polygon) {
               const extent = geometry.getExtent();
-              const position = [(extent[0] + extent[2]) / 2, extent[3]];
-              overlayInstance.setPosition(position);
+              const position = [
+                (extent[0] + extent[2]) / 2,
+                extent[3]
+              ];
+              requestAnimationFrame(() => {
+                overlayInstance.setPosition(position);
+              });
             }
           }
-        });
+        };
+
+        view.on("change:resolution", updateOverlayPosition);
+        view.on("change:center", updateOverlayPosition);
       } catch (error) {
         console.error("Error setting up overlay:", error);
       }
