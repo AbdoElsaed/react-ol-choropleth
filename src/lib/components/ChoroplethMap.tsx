@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useMemo, memo, useCallback } from "react";
-import * as ReactDOM from "react-dom/client";
+import { createRoot } from "react-dom/client";
 import Map from "ol/Map";
 import View from "ol/View";
 import TileLayer from "ol/layer/Tile";
@@ -98,7 +98,10 @@ const ChoroplethMap = ({
   const vectorLayerRef = useRef<VectorLayer<
     VectorSource<Feature<Geometry>>
   > | null>(null);
-  const overlayRef = useRef<{ instance: Overlay | null; root: any | null }>({
+  const overlayRef = useRef<{
+    instance: Overlay | null;
+    root: ReturnType<typeof createRoot> | null;
+  }>({
     instance: null,
     root: null,
   });
@@ -176,7 +179,8 @@ const ChoroplethMap = ({
               if (!overlayRef.current.root) {
                 const container = document.createElement("div");
                 container.className = "react-ol-choropleth__overlay-container";
-                overlayRef.current.root = ReactDOM.createRoot(container);
+                const root = createRoot(container);
+                overlayRef.current.root = root;
                 overlayRef.current.instance.setElement(container);
               }
 
