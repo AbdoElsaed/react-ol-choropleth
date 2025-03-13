@@ -174,7 +174,7 @@ const ChoroplethMap = ({
             // Update content first
             overlayContainerRef.current.innerHTML = `<div class="react-ol-choropleth__overlay">${content}</div>`;
 
-            // Calculate position at the top center of the feature
+            // Get the top center coordinate of the feature
             const extent = geometry.getExtent();
             const position = [
               (extent[0] + extent[2]) / 2, // Center X
@@ -280,6 +280,18 @@ const ChoroplethMap = ({
 
         overlayRef.current = overlayInstance;
         map.addOverlay(overlayInstance);
+
+        // Update overlay position on view change
+        view.on("change:resolution", () => {
+          if (selectedFeatureRef.current) {
+            const geometry = selectedFeatureRef.current.getGeometry();
+            if (geometry instanceof Polygon) {
+              const extent = geometry.getExtent();
+              const position = [(extent[0] + extent[2]) / 2, extent[3]];
+              overlayInstance.setPosition(position);
+            }
+          }
+        });
       } catch (error) {
         console.error("Error setting up overlay:", error);
       }
