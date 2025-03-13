@@ -22,31 +22,23 @@ import Feature from "ol/Feature";
 import Polygon from "ol/geom/Polygon";
 import chroma from "chroma-js";
 import Overlay from "ol/Overlay";
-import { createRoot, type Root } from "react-dom/client";
+import { createRoot } from "react-dom/client";
 import "../styles/choropleth.css";
 
-const DefaultOverlay = memo(
-  ({
-    feature,
-    className = "",
-  }: {
-    feature: FeatureLike;
-    className?: string;
-  }) => {
-    const properties = feature.getProperties();
-    return (
-      <div className={`react-ol-choropleth__overlay ${className}`.trim()}>
-        {Object.entries(properties)
-          .filter(([key]) => key !== "geometry")
-          .map(([key, value]) => (
-            <div key={key} className="react-ol-choropleth__overlay-property">
-              <strong>{key}:</strong> {String(value)}
-            </div>
-          ))}
-      </div>
-    );
-  }
-);
+const DefaultOverlay = memo(({ feature }: { feature: FeatureLike }) => {
+  const properties = feature.getProperties();
+  return (
+    <div className="react-ol-choropleth__overlay">
+      {Object.entries(properties)
+        .filter(([key]) => key !== "geometry")
+        .map(([key, value]) => (
+          <div key={key} className="react-ol-choropleth__overlay-property">
+            <strong>{key}:</strong> {String(value)}
+          </div>
+        ))}
+    </div>
+  );
+});
 
 DefaultOverlay.displayName = "DefaultOverlay";
 
@@ -110,7 +102,7 @@ const ChoroplethMap = ({
     VectorSource<Feature<Geometry>>
   > | null>(null);
   const overlayInstanceRef = useRef<Overlay | null>(null);
-  const overlayRootRef = useRef<Root | null>(null);
+  const overlayRootRef = useRef<ReturnType<typeof createRoot> | null>(null);
 
   // Create vector source only when data changes
   const vectorSource = useMemo(() => {
@@ -135,119 +127,6 @@ const ChoroplethMap = ({
 
   const getColor = useColorScale({ data: features, valueProperty, colorScale });
 
-  const updateOverlayContent = useCallback(
-    (feature: FeatureLike | null) => {
-      if (!overlayRef.current || !overlayOptions) return;
-
-      const content = feature ? (
-        overlayOptions.render ? (
-          overlayOptions.render(feature)
-        ) : (
-          <DefaultOverlay feature={feature} />
-        )
-      ) : null;
-
-      try {
-        // Clean up previous root
-        if (overlayRootRef.current) {
-          overlayRootRef.current.unmount();
-          overlayRootRef.current = null;
-        }
-
-        // Clear the container
-        if (overlayRef.current) {
-          overlayRef.current.innerHTML = "";
-        }
-
-        // Create and render new content
-        if (content && overlayRef.current) {
-          const container = document.createElement("div");
-          container.className = "react-ol-choropleth__overlay";
-          overlayRef.current.appendChild(container);
-
-          // Create new root and render
-          const root = createRoot(container);
-          overlayRootRef.current = root;
-          root.render(content);
-        }
-      } catch (error) {
-        console.error("Error updating overlay content:", error);
-      }
-    },
-    [overlayOptions]
-  );
-
-  // Clean up overlay root on unmount
-  useEffect(() => {
-    return () => {
-      if (overlayRootRef.current) {
-        overlayRootRef.current.unmount();
-      }
-    };
-  }, []);
-
-  // Handle feature click
-  const handleFeatureClick = useCallback(
-    (event: any, map: Map) => {
-      const feature = map.forEachFeatureAtPixel(
-        event.pixel,
-        (feature) => feature
-      );
-
-      // Update selected feature ref
-      selectedFeatureRef.current = feature || null;
-
-      if (feature) {
-        const geometry = feature.getGeometry();
-        if (geometry instanceof Polygon) {
-          const centroid = geometry.getInteriorPoint().getCoordinates();
-
-          // Update overlay content and position
-          updateOverlayContent(feature);
-          if (overlayInstanceRef.current) {
-            overlayInstanceRef.current.setPosition(centroid);
-          }
-
-          if (onFeatureClick) {
-            onFeatureClick(feature, centroid as [number, number]);
-          }
-
-          // Zoom to centroid with better animation
-          if (zoomToFeature && mapInstanceRef.current) {
-            const view = mapInstanceRef.current.getView();
-            const extent = geometry.getExtent();
-            const resolution = view.getResolutionForExtent(
-              extent,
-              mapInstanceRef.current.getSize() || undefined
-            );
-            const zoom = view.getZoomForResolution(resolution || 1);
-
-            view.animate({
-              center: centroid,
-              zoom: zoom ? Math.min(zoom + 0.5, 6) : 6,
-              duration: 500,
-            });
-          }
-
-          // Force vector layer to refresh styles
-          if (vectorLayerRef.current) {
-            vectorLayerRef.current.changed();
-          }
-        }
-      } else {
-        // Clear overlay
-        updateOverlayContent(null);
-        if (overlayInstanceRef.current) {
-          overlayInstanceRef.current.setPosition(undefined);
-        }
-        if (onFeatureClick) {
-          onFeatureClick(null);
-        }
-      }
-    },
-    [onFeatureClick, zoomToFeature, updateOverlayContent]
-  );
-
   // Style function that uses the ref for selected feature
   const styleFunction = useCallback(
     (feature: FeatureLike) => {
@@ -268,6 +147,137 @@ const ChoroplethMap = ({
       });
     },
     [getColor, valueProperty, selectedFeatureBorderColor]
+  );
+
+  // Cleanup function for overlay
+  const cleanupOverlay = useCallback(() => {
+    if (overlayRootRef.current) {
+      overlayRootRef.current.unmount();
+      overlayRootRef.current = null;
+    }
+    if (overlayInstanceRef.current && mapInstanceRef.current) {
+      mapInstanceRef.current.removeOverlay(overlayInstanceRef.current);
+      overlayInstanceRef.current = null;
+    }
+  }, []);
+
+  // Setup overlay
+  const setupOverlay = useCallback(() => {
+    if (!overlayRef.current || !overlayOptions || !mapInstanceRef.current)
+      return;
+
+    // Cleanup existing overlay first
+    cleanupOverlay();
+
+    const overlayInstance = new Overlay({
+      element: overlayRef.current,
+      positioning: overlayOptions.positioning || "bottom-center",
+      offset: overlayOptions.offset || [0, -10],
+      stopEvent: false,
+      className: "react-ol-choropleth__overlay-wrapper",
+      autoPan: overlayOptions.autoPan !== false,
+    });
+
+    overlayInstanceRef.current = overlayInstance;
+    mapInstanceRef.current.addOverlay(overlayInstance);
+  }, [overlayOptions, cleanupOverlay]);
+
+  // Handle feature click with improved overlay management
+  const handleFeatureClick = useCallback(
+    (event: any, map: Map) => {
+      const clickedFeature = map.forEachFeatureAtPixel(
+        event.pixel,
+        (feature) => feature
+      );
+
+      // Update selected feature
+      selectedFeatureRef.current = clickedFeature || null;
+
+      if (clickedFeature) {
+        const geometry = clickedFeature.getGeometry();
+        if (geometry instanceof Polygon) {
+          const centroid = geometry.getInteriorPoint().getCoordinates();
+
+          // Update overlay content and position
+          if (
+            overlayRef.current &&
+            overlayInstanceRef.current &&
+            overlayOptions
+          ) {
+            const content = overlayOptions.render ? (
+              overlayOptions.render(clickedFeature)
+            ) : (
+              <DefaultOverlay feature={clickedFeature} />
+            );
+
+            // Create or update overlay content
+            if (!overlayRootRef.current && overlayRef.current) {
+              overlayRootRef.current = createRoot(overlayRef.current);
+            }
+
+            if (overlayRootRef.current) {
+              try {
+                overlayRootRef.current.render(content);
+                overlayInstanceRef.current.setPosition(centroid);
+              } catch (error) {
+                console.warn("Error rendering overlay:", error);
+                cleanupOverlay();
+                setupOverlay();
+              }
+            }
+          }
+
+          if (onFeatureClick) {
+            onFeatureClick(clickedFeature, centroid as [number, number]);
+          }
+
+          // Zoom to centroid with better animation
+          if (zoomToFeature && mapInstanceRef.current) {
+            const view = mapInstanceRef.current.getView();
+            const extent = geometry.getExtent();
+            const resolution = view.getResolutionForExtent(
+              extent,
+              mapInstanceRef.current.getSize() || undefined
+            );
+            const zoom = view.getZoomForResolution(resolution || 1);
+
+            view.animate({
+              center: centroid,
+              zoom: zoom ? Math.min(zoom + 0.5, 6) : 6,
+              duration: 500,
+            });
+          }
+        }
+      } else {
+        // Hide overlay when no feature is selected
+        if (overlayInstanceRef.current) {
+          overlayInstanceRef.current.setPosition(undefined);
+        }
+        if (overlayRootRef.current) {
+          try {
+            overlayRootRef.current.render(null);
+          } catch (error) {
+            console.warn("Error clearing overlay:", error);
+            cleanupOverlay();
+          }
+        }
+        if (onFeatureClick) {
+          onFeatureClick(null);
+        }
+      }
+
+      // Force vector layer to refresh styles
+      if (vectorLayerRef.current) {
+        vectorLayerRef.current.changed();
+      }
+    },
+    [
+      onFeatureClick,
+      zoomToFeature,
+      overlayOptions,
+      cleanupOverlay,
+      setupOverlay,
+    ]
   );
 
   // Effect for initial map setup
@@ -311,29 +321,8 @@ const ChoroplethMap = ({
 
     mapInstanceRef.current = map;
 
-    // Create overlay after map is initialized
-    if (overlayRef.current) {
-      const overlayInstance = new Overlay({
-        element: overlayRef.current,
-        positioning:
-          overlayOptions && "positioning" in overlayOptions
-            ? overlayOptions.positioning
-            : "bottom-center",
-        offset:
-          overlayOptions && "offset" in overlayOptions
-            ? overlayOptions.offset
-            : [0, -10],
-        stopEvent: false,
-        className:
-          "ol-overlay-container ol-selectable react-ol-choropleth__overlay-wrapper",
-        autoPan:
-          overlayOptions && "autoPan" in overlayOptions
-            ? overlayOptions.autoPan
-            : true,
-      });
-      overlayInstanceRef.current = overlayInstance;
-      map.addOverlay(overlayInstance);
-    }
+    // Setup overlay
+    setupOverlay();
 
     // Set up click handler
     const clickListener = (event: any) => handleFeatureClick(event, map);
@@ -350,10 +339,8 @@ const ChoroplethMap = ({
     }
 
     return () => {
-      if (overlayRef.current) {
-        overlayRef.current.innerHTML = "";
-      }
       map.un("click", clickListener);
+      cleanupOverlay();
       map.dispose();
       initialFitRef.current = false;
     };
@@ -366,16 +353,16 @@ const ChoroplethMap = ({
     onFeatureHover,
     zoom,
     overlayOptions,
-    updateOverlayContent,
+    cleanupOverlay,
+    setupOverlay,
   ]);
 
-  // Update zoom when it changes
+  // Effect to handle overlayOptions changes
   useEffect(() => {
     if (mapInstanceRef.current) {
-      const view = mapInstanceRef.current.getView();
-      view.setZoom(zoom);
+      setupOverlay();
     }
-  }, [zoom]);
+  }, [overlayOptions, setupOverlay]);
 
   const values = useMemo(() => {
     return features
