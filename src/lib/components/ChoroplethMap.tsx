@@ -159,13 +159,6 @@ const ChoroplethMap = ({
           overlayContainerRef.current &&
           overlayOptions
         ) {
-          // Get the centroid of the feature
-          const extent = geometry.getExtent();
-          const centroid = [
-            (extent[0] + extent[2]) / 2,
-            (extent[1] + extent[3]) / 2,
-          ];
-
           try {
             let content = "";
             if (overlayOptions.render) {
@@ -178,23 +171,25 @@ const ChoroplethMap = ({
               content = generateOverlayContent(clickedFeature);
             }
 
+            // Update content first
             overlayContainerRef.current.innerHTML = `<div class="react-ol-choropleth__overlay">${content}</div>`;
-            overlayRef.current.setPosition(centroid);
 
-            // Ensure overlay is visible after setting position
-            requestAnimationFrame(() => {
-              if (overlayRef.current) {
-                overlayRef.current.setPosition(centroid);
-              }
-            });
+            // Calculate position at the top center of the feature
+            const extent = geometry.getExtent();
+            const position = [
+              (extent[0] + extent[2]) / 2, // Center X
+              extent[3], // Top Y
+            ];
+
+            // Set position after content update
+            overlayRef.current.setPosition(position);
 
             if (onFeatureClick) {
-              onFeatureClick(clickedFeature, centroid as [number, number]);
+              onFeatureClick(clickedFeature, position as [number, number]);
             }
 
             if (zoomToFeature && mapInstanceRef.current) {
               const view = mapInstanceRef.current.getView();
-              const extent = geometry.getExtent();
               const resolution = view.getResolutionForExtent(
                 extent,
                 mapInstanceRef.current.getSize() || undefined
@@ -202,7 +197,7 @@ const ChoroplethMap = ({
               const zoom = view.getZoomForResolution(resolution || 1);
 
               view.animate({
-                center: centroid,
+                center: position,
                 zoom: zoom ? Math.min(zoom + 0.5, 6) : 6,
                 duration: 500,
               });
