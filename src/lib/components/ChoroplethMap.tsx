@@ -92,7 +92,6 @@ const ChoroplethMap = ({
   legendClassName = "",
 }: ExtendedChoroplethMapProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
-  const overlayRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<Map | null>(null);
   const vectorSourceRef = useRef<VectorSource<Feature<Geometry>> | null>(null);
   const [features, setFeatures] = useState<Feature<Geometry>[]>([]);
@@ -101,8 +100,10 @@ const ChoroplethMap = ({
   const vectorLayerRef = useRef<VectorLayer<
     VectorSource<Feature<Geometry>>
   > | null>(null);
-  const overlayInstanceRef = useRef<Overlay | null>(null);
-  const overlayRootRef = useRef<ReturnType<typeof createRoot> | null>(null);
+  const overlayRef = useRef<{ instance: Overlay | null; root: any | null }>({
+    instance: null,
+    root: null,
+  });
 
   // Create vector source only when data changes
   const vectorSource = useMemo(() => {
@@ -149,56 +150,7 @@ const ChoroplethMap = ({
     [getColor, valueProperty, selectedFeatureBorderColor]
   );
 
-  // Cleanup function for overlay
-  const cleanupOverlay = useCallback(() => {
-    if (overlayRootRef.current) {
-      try {
-        overlayRootRef.current.unmount();
-      } catch (error) {
-        console.warn("Error unmounting overlay root:", error);
-      }
-      overlayRootRef.current = null;
-    }
-    if (overlayInstanceRef.current && mapInstanceRef.current) {
-      mapInstanceRef.current.removeOverlay(overlayInstanceRef.current);
-      overlayInstanceRef.current = null;
-    }
-  }, []);
-
-  // Setup overlay
-  const setupOverlay = useCallback(() => {
-    if (!overlayRef.current || !overlayOptions || !mapInstanceRef.current)
-      return;
-
-    // Cleanup existing overlay first
-    cleanupOverlay();
-
-    try {
-      const overlayInstance = new Overlay({
-        element: overlayRef.current,
-        positioning: overlayOptions.positioning || "bottom-center",
-        offset: overlayOptions.offset || [0, -10],
-        stopEvent: true,
-        className: "react-ol-choropleth__overlay-wrapper",
-        autoPan: overlayOptions.autoPan !== false,
-      });
-
-      overlayInstanceRef.current = overlayInstance;
-      mapInstanceRef.current.addOverlay(overlayInstance);
-
-      // Create new root only if it doesn't exist
-      if (!overlayRootRef.current && overlayRef.current) {
-        overlayRootRef.current = createRoot(overlayRef.current);
-        // Initialize with empty content
-        overlayRootRef.current.render(<div style={{ display: "none" }} />);
-      }
-    } catch (error) {
-      console.warn("Error setting up overlay:", error);
-      cleanupOverlay();
-    }
-  }, [overlayOptions, cleanupOverlay]);
-
-  // Handle feature click with improved overlay management
+  // Handle feature click
   const handleFeatureClick = useCallback(
     (event: any, map: Map) => {
       const clickedFeature = map.forEachFeatureAtPixel(
@@ -214,50 +166,27 @@ const ChoroplethMap = ({
         if (geometry instanceof Polygon) {
           const centroid = geometry.getInteriorPoint().getCoordinates();
 
-          // Update overlay content and position
-          if (
-            overlayRef.current &&
-            overlayInstanceRef.current &&
-            overlayOptions
-          ) {
-            try {
-              // Create root if it doesn't exist
-              if (!overlayRootRef.current && overlayRef.current) {
-                overlayRootRef.current = createRoot(overlayRef.current);
-              }
+          if (overlayRef.current.instance && overlayOptions) {
+            const content = overlayOptions.render ? (
+              overlayOptions.render(clickedFeature)
+            ) : (
+              <DefaultOverlay feature={clickedFeature} />
+            );
 
-              const content = overlayOptions.render ? (
-                overlayOptions.render(clickedFeature)
-              ) : (
-                <DefaultOverlay feature={clickedFeature} />
-              );
-
-              // First set the position
-              overlayInstanceRef.current.setPosition(centroid);
-
-              // Then render the content
-              if (overlayRootRef.current) {
-                overlayRootRef.current.render(content);
-              }
-
-              // Force a reposition after a small delay to ensure proper positioning
-              requestAnimationFrame(() => {
-                if (overlayInstanceRef.current) {
-                  overlayInstanceRef.current.setPosition(centroid);
-                }
-              });
-            } catch (error) {
-              console.warn("Error rendering overlay:", error);
-              cleanupOverlay();
-              setupOverlay();
+            // Update overlay content using React root
+            if (!overlayRef.current.root) {
+              const container = document.createElement("div");
+              overlayRef.current.root = createRoot(container);
+              overlayRef.current.instance.setElement(container);
             }
+            overlayRef.current.root.render(content);
+            overlayRef.current.instance.setPosition(centroid);
           }
 
           if (onFeatureClick) {
             onFeatureClick(clickedFeature, centroid as [number, number]);
           }
 
-          // Zoom to centroid with better animation
           if (zoomToFeature && mapInstanceRef.current) {
             const view = mapInstanceRef.current.getView();
             const extent = geometry.getExtent();
@@ -276,16 +205,8 @@ const ChoroplethMap = ({
         }
       } else {
         // Hide overlay when no feature is selected
-        if (overlayInstanceRef.current) {
-          overlayInstanceRef.current.setPosition(undefined);
-        }
-        if (overlayRootRef.current) {
-          try {
-            overlayRootRef.current.render(<div style={{ display: "none" }} />);
-          } catch (error) {
-            console.warn("Error clearing overlay:", error);
-            cleanupOverlay();
-          }
+        if (overlayRef.current.instance) {
+          overlayRef.current.instance.setPosition(undefined);
         }
         if (onFeatureClick) {
           onFeatureClick(null);
@@ -297,13 +218,7 @@ const ChoroplethMap = ({
         vectorLayerRef.current.changed();
       }
     },
-    [
-      onFeatureClick,
-      zoomToFeature,
-      overlayOptions,
-      cleanupOverlay,
-      setupOverlay,
-    ]
+    [onFeatureClick, zoomToFeature, overlayOptions]
   );
 
   // Effect for initial map setup
@@ -347,8 +262,19 @@ const ChoroplethMap = ({
 
     mapInstanceRef.current = map;
 
-    // Setup overlay
-    setupOverlay();
+    // Set up overlay if enabled
+    if (overlayOptions) {
+      const overlayInstance = new Overlay({
+        positioning: overlayOptions.positioning || "bottom-center",
+        offset: overlayOptions.offset || [0, -10],
+        stopEvent: false,
+        className: "react-ol-choropleth__overlay-wrapper",
+        autoPan: overlayOptions.autoPan !== false,
+      });
+
+      overlayRef.current.instance = overlayInstance;
+      map.addOverlay(overlayInstance);
+    }
 
     // Set up click handler
     const clickListener = (event: any) => handleFeatureClick(event, map);
@@ -365,6 +291,11 @@ const ChoroplethMap = ({
     }
 
     return () => {
+      // Cleanup React root if it exists
+      if (overlayRef.current.root) {
+        overlayRef.current.root.unmount();
+      }
+
       map.un("click", clickListener);
       if (onFeatureHover) {
         map.un("pointermove", (event) => {
@@ -375,12 +306,15 @@ const ChoroplethMap = ({
           onFeatureHover(feature || null);
         });
       }
-      cleanupOverlay();
+      if (overlayRef.current.instance) {
+        map.removeOverlay(overlayRef.current.instance);
+      }
       map.dispose();
       initialFitRef.current = false;
       selectedFeatureRef.current = null;
       vectorLayerRef.current = null;
       mapInstanceRef.current = null;
+      overlayRef.current = { instance: null, root: null };
     };
   }, [
     vectorSource,
@@ -391,16 +325,7 @@ const ChoroplethMap = ({
     onFeatureHover,
     zoom,
     overlayOptions,
-    cleanupOverlay,
-    setupOverlay,
   ]);
-
-  // Effect to handle overlayOptions changes
-  useEffect(() => {
-    if (mapInstanceRef.current) {
-      setupOverlay();
-    }
-  }, [overlayOptions, setupOverlay]);
 
   const values = useMemo(() => {
     return features
@@ -413,10 +338,6 @@ const ChoroplethMap = ({
       <div
         ref={mapRef}
         className={`react-ol-choropleth__map ${mapClassName}`.trim()}
-      />
-      <div
-        ref={overlayRef}
-        className={`react-ol-choropleth__overlay-container ${overlayClassName}`.trim()}
       />
       {showLegend && colorScale && values.length > 0 && (
         <Legend
