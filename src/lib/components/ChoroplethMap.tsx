@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useMemo, memo, useCallback } from "react";
-import { createRoot } from "react-dom/client";
+import { createPortal } from "react-dom";
+import { renderToString } from "react-dom/server";
 import Map from "ol/Map";
 import View from "ol/View";
 import TileLayer from "ol/layer/Tile";
@@ -41,6 +42,21 @@ const DefaultOverlay = memo(({ feature }: { feature: FeatureLike }) => {
 });
 
 DefaultOverlay.displayName = "DefaultOverlay";
+
+const OverlayPortal = memo(
+  ({
+    children,
+    container,
+  }: {
+    children: React.ReactNode;
+    container: HTMLElement | null;
+  }) => {
+    if (!container) return null;
+    return createPortal(children, container);
+  }
+);
+
+OverlayPortal.displayName = "OverlayPortal";
 
 type BaseChoroplethMapProps = {
   data: FeatureLike[] | GeoJSONFeatureCollection;
@@ -92,19 +108,14 @@ const ChoroplethMap = ({
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<Map | null>(null);
   const vectorSourceRef = useRef<VectorSource<Feature<Geometry>> | null>(null);
+  const overlayRef = useRef<Overlay | null>(null);
+  const overlayContainerRef = useRef<HTMLDivElement | null>(null);
   const [features, setFeatures] = useState<Feature<Geometry>[]>([]);
   const initialFitRef = useRef<boolean>(false);
   const selectedFeatureRef = useRef<FeatureLike | null>(null);
   const vectorLayerRef = useRef<VectorLayer<
     VectorSource<Feature<Geometry>>
   > | null>(null);
-  const overlayRef = useRef<{
-    instance: Overlay | null;
-    root: ReturnType<typeof createRoot> | null;
-  }>({
-    instance: null,
-    root: null,
-  });
 
   // Create vector source only when data changes
   const vectorSource = useMemo(() => {
@@ -164,34 +175,43 @@ const ChoroplethMap = ({
 
       if (clickedFeature) {
         const geometry = clickedFeature.getGeometry();
-        if (geometry instanceof Polygon) {
+        if (
+          geometry instanceof Polygon &&
+          overlayRef.current &&
+          overlayContainerRef.current &&
+          overlayOptions
+        ) {
           const centroid = geometry.getInteriorPoint().getCoordinates();
 
-          if (overlayRef.current.instance && overlayOptions) {
-            try {
-              const content = overlayOptions.render ? (
-                overlayOptions.render(clickedFeature)
-              ) : (
-                <DefaultOverlay feature={clickedFeature} />
-              );
+          try {
+            // Generate content
+            const content = overlayOptions.render
+              ? overlayOptions.render(clickedFeature)
+              : Object.entries(clickedFeature.getProperties())
+                  .filter(([key]) => key !== "geometry")
+                  .map(
+                    ([key, value]) =>
+                      `<div class="react-ol-choropleth__overlay-property">
+                    <strong>${key}:</strong> ${String(value)}
+                   </div>`
+                  )
+                  .join("");
 
-              // Create or update overlay content
-              if (!overlayRef.current.root) {
-                const container = document.createElement("div");
-                container.className = "react-ol-choropleth__overlay-container";
-                const root = createRoot(container);
-                overlayRef.current.root = root;
-                overlayRef.current.instance.setElement(container);
-              }
-
-              // Render content
-              overlayRef.current.root.render(content);
-              overlayRef.current.instance.setPosition(centroid);
-            } catch (error) {
-              console.error("Error updating overlay:", error);
-              // Hide overlay on error
-              overlayRef.current.instance.setPosition(undefined);
+            // Update content
+            if (typeof content === "string") {
+              overlayContainerRef.current.innerHTML = `<div class="react-ol-choropleth__overlay">${content}</div>`;
+            } else {
+              // For React elements, render to string
+              overlayContainerRef.current.innerHTML = `<div class="react-ol-choropleth__overlay">${renderToString(
+                content
+              )}</div>`;
             }
+
+            // Show overlay
+            overlayRef.current.setPosition(centroid);
+          } catch (error) {
+            console.error("Error updating overlay:", error);
+            overlayRef.current.setPosition(undefined);
           }
 
           if (onFeatureClick) {
@@ -216,8 +236,8 @@ const ChoroplethMap = ({
         }
       } else {
         // Hide overlay when no feature is selected
-        if (overlayRef.current.instance) {
-          overlayRef.current.instance.setPosition(undefined);
+        if (overlayRef.current) {
+          overlayRef.current.setPosition(undefined);
         }
         if (onFeatureClick) {
           onFeatureClick(null);
@@ -278,6 +298,7 @@ const ChoroplethMap = ({
       try {
         const container = document.createElement("div");
         container.className = "react-ol-choropleth__overlay-container";
+        overlayContainerRef.current = container;
 
         const overlayInstance = new Overlay({
           element: container,
@@ -288,7 +309,7 @@ const ChoroplethMap = ({
           autoPan: overlayOptions.autoPan !== false,
         });
 
-        overlayRef.current.instance = overlayInstance;
+        overlayRef.current = overlayInstance;
         map.addOverlay(overlayInstance);
       } catch (error) {
         console.error("Error setting up overlay:", error);
@@ -311,33 +332,14 @@ const ChoroplethMap = ({
 
     return () => {
       try {
-        // Cleanup React root if it exists
-        if (overlayRef.current.root) {
-          overlayRef.current.root.unmount();
+        if (overlayRef.current) {
+          map.removeOverlay(overlayRef.current);
         }
-
-        map.un("click", clickListener);
-        if (onFeatureHover) {
-          map.un("pointermove", (event) => {
-            const feature = map.forEachFeatureAtPixel(
-              event.pixel,
-              (feature) => feature
-            );
-            onFeatureHover(feature || null);
-          });
-        }
-        if (overlayRef.current.instance) {
-          map.removeOverlay(overlayRef.current.instance);
-        }
+        overlayRef.current = null;
+        overlayContainerRef.current = null;
         map.dispose();
       } catch (error) {
         console.error("Error cleaning up map:", error);
-      } finally {
-        initialFitRef.current = false;
-        selectedFeatureRef.current = null;
-        vectorLayerRef.current = null;
-        mapInstanceRef.current = null;
-        overlayRef.current = { instance: null, root: null };
       }
     };
   }, [
