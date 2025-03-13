@@ -1,6 +1,4 @@
 import { useEffect, useRef, useState, useMemo, memo, useCallback } from "react";
-import { createPortal } from "react-dom";
-import { renderToString } from "react-dom/server";
 import Map from "ol/Map";
 import View from "ol/View";
 import TileLayer from "ol/layer/Tile";
@@ -26,37 +24,18 @@ import chroma from "chroma-js";
 import Overlay from "ol/Overlay";
 import "../styles/choropleth.css";
 
-const DefaultOverlay = memo(({ feature }: { feature: FeatureLike }) => {
+const generateOverlayContent = (feature: FeatureLike) => {
   const properties = feature.getProperties();
-  return (
-    <div className="react-ol-choropleth__overlay">
-      {Object.entries(properties)
-        .filter(([key]) => key !== "geometry")
-        .map(([key, value]) => (
-          <div key={key} className="react-ol-choropleth__overlay-property">
-            <strong>{key}:</strong> {String(value)}
-          </div>
-        ))}
-    </div>
-  );
-});
-
-DefaultOverlay.displayName = "DefaultOverlay";
-
-const OverlayPortal = memo(
-  ({
-    children,
-    container,
-  }: {
-    children: React.ReactNode;
-    container: HTMLElement | null;
-  }) => {
-    if (!container) return null;
-    return createPortal(children, container);
-  }
-);
-
-OverlayPortal.displayName = "OverlayPortal";
+  return Object.entries(properties)
+    .filter(([key]) => key !== "geometry")
+    .map(
+      ([key, value]) =>
+        `<div class="react-ol-choropleth__overlay-property">
+        <strong>${key}:</strong> ${String(value)}
+      </div>`
+    )
+    .join("");
+};
 
 type BaseChoroplethMapProps = {
   data: FeatureLike[] | GeoJSONFeatureCollection;
@@ -184,30 +163,18 @@ const ChoroplethMap = ({
           const centroid = geometry.getInteriorPoint().getCoordinates();
 
           try {
-            // Generate content
-            const content = overlayOptions.render
-              ? overlayOptions.render(clickedFeature)
-              : Object.entries(clickedFeature.getProperties())
-                  .filter(([key]) => key !== "geometry")
-                  .map(
-                    ([key, value]) =>
-                      `<div class="react-ol-choropleth__overlay-property">
-                    <strong>${key}:</strong> ${String(value)}
-                   </div>`
-                  )
-                  .join("");
-
-            // Update content
-            if (typeof content === "string") {
-              overlayContainerRef.current.innerHTML = `<div class="react-ol-choropleth__overlay">${content}</div>`;
+            let content = "";
+            if (overlayOptions.render) {
+              const result = overlayOptions.render(clickedFeature);
+              content =
+                typeof result === "string"
+                  ? result
+                  : generateOverlayContent(clickedFeature);
             } else {
-              // For React elements, render to string
-              overlayContainerRef.current.innerHTML = `<div class="react-ol-choropleth__overlay">${renderToString(
-                content
-              )}</div>`;
+              content = generateOverlayContent(clickedFeature);
             }
 
-            // Show overlay
+            overlayContainerRef.current.innerHTML = `<div class="react-ol-choropleth__overlay">${content}</div>`;
             overlayRef.current.setPosition(centroid);
           } catch (error) {
             console.error("Error updating overlay:", error);
