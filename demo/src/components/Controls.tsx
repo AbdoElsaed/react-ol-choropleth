@@ -9,8 +9,8 @@ interface ControlsProps {
   setShowLegend: (show: boolean) => void;
   legendPosition: LegendPosition;
   setLegendPosition: (position: LegendPosition) => void;
-  baseMap: "osm" | "none";
-  setBaseMap: (baseMap: "osm" | "none") => void;
+  baseMap: "osm" | "satellite" | "none";
+  setBaseMap: (baseMap: "osm" | "satellite" | "none") => void;
   steps: number;
   setSteps: (steps: number) => void;
   scaleType: ColorScaleType;
@@ -273,9 +273,10 @@ const Controls = memo(
               <label>Base Map:</label>
               <select
                 value={baseMap}
-                onChange={(e) => setBaseMap(e.target.value as "osm" | "none")}
+                onChange={(e) => setBaseMap(e.target.value as "osm" | "satellite" | "none")}
               >
                 <option value="osm">OpenStreetMap</option>
+                <option value="satellite">Satellite</option>
                 <option value="none">None</option>
               </select>
             </div>

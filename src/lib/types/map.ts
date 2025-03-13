@@ -97,7 +97,7 @@ export interface ChoroplethMapProps {
     /** Initial zoom level */
     zoom?: number;
     /** Base map layer type */
-    baseMap?: 'osm' | 'none';
+    baseMap?: 'osm' | 'satellite' | 'none';
     /** Whether to show the legend */
     showLegend?: boolean;
     /** Position of the legend */

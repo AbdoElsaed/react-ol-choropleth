@@ -5,6 +5,7 @@ import TileLayer from "ol/layer/Tile";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import OSM from "ol/source/OSM";
+import XYZ from "ol/source/XYZ";
 import GeoJSON from "ol/format/GeoJSON";
 import { Style, Fill, Stroke } from "ol/style";
 import type { StyleLike } from "ol/style/Style";
@@ -45,7 +46,7 @@ type BaseChoroplethMapProps = {
   colorScale: ColorScale;
   style?: Style | StyleLike;
   zoom?: number;
-  baseMap?: "osm" | "none";
+  baseMap?: "osm" | "satellite" | "none";
   showLegend?: boolean;
   legendPosition?: LegendPosition;
   onFeatureClick?: (
@@ -240,10 +241,24 @@ const ChoroplethMap = ({
     });
     vectorLayerRef.current = vectorLayer;
 
-    const layers = [
-      ...(baseMap === "osm" ? [new TileLayer({ source: new OSM() })] : []),
-      vectorLayer,
-    ];
+    // Configure base layers based on type
+    const baseLayers = [];
+    if (baseMap !== "none") {
+      if (baseMap === "satellite") {
+        baseLayers.push(
+          new TileLayer({
+            source: new XYZ({
+              url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+              maxZoom: 19,
+            }),
+          })
+        );
+      } else {
+        baseLayers.push(new TileLayer({ source: new OSM() }));
+      }
+    }
+
+    const layers = [...baseLayers, vectorLayer];
 
     const view = new View({
       projection: "EPSG:3857",

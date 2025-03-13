@@ -44,7 +44,7 @@ function App() {
   const [showLegend, setShowLegend] = useState(true);
   const [legendPosition, setLegendPosition] =
     useState<LegendPosition>("top-right");
-  const [baseMap, setBaseMap] = useState<"osm" | "none">("osm");
+  const [baseMap, setBaseMap] = useState<"osm" | "satellite" | "none">("osm");
   const [zoomToFeature, setZoomToFeature] = useState(true);
   const [selectedFeatureBorderColor, setSelectedFeatureBorderColor] =
     useState("#0099ff");
