@@ -27,7 +27,7 @@ export default defineConfig({
         'react',
         'react-dom',
         'react/jsx-runtime',
-        'ol',
+        /^ol\/.*/,  // Mark all OpenLayers imports as external
         'chroma-js'
       ],
       output: {
@@ -35,12 +35,24 @@ export default defineConfig({
           react: "React",
           "react-dom": "ReactDOM",
           "react/jsx-runtime": "jsxRuntime",
-          ol: "ol",
+          "ol/Map.js": "ol.Map",
+          "ol/View.js": "ol.View",
+          "ol/layer/Tile.js": "ol.layer.Tile",
+          "ol/layer/Vector.js": "ol.layer.Vector",
+          "ol/source/Vector.js": "ol.source.Vector",
+          "ol/source/OSM.js": "ol.source.OSM",
+          "ol/source/XYZ.js": "ol.source.XYZ",
+          "ol/format/GeoJSON.js": "ol.format.GeoJSON",
+          "ol/style.js": "ol.style",
+          "ol/Feature.js": "ol.Feature",
+          "ol/geom.js": "ol.geom",
+          "ol/geom/Polygon.js": "ol.geom.Polygon",
+          "ol/Overlay.js": "ol.Overlay",
           "chroma-js": "chroma"
         },
         assetFileNames: 'style.css',
+        inlineDynamicImports: true,
         manualChunks: undefined,
-        inlineDynamicImports: false,
         compact: true
       },
     },
@@ -50,18 +62,26 @@ export default defineConfig({
         drop_console: true,
         drop_debugger: true,
         pure_funcs: ['console.log', 'console.info', 'console.debug', 'console.warn'],
-        passes: 2
+        passes: 2,
+        module: true,
+        toplevel: true
       },
       mangle: {
-        properties: false
+        properties: false,
+        toplevel: true
       },
       format: {
-        comments: false
+        comments: false,
+        ecma: 2020
       }
     },
     cssCodeSplit: false,
     reportCompressedSize: true,
-    chunkSizeWarningLimit: 500
+    chunkSizeWarningLimit: 500,
+    target: 'es2020'
+  },
+  optimizeDeps: {
+    exclude: ['ol']
   },
   server: {
     open: true

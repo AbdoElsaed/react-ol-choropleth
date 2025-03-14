@@ -1,29 +1,32 @@
 import { useEffect, useRef, useState, useMemo, memo, useCallback } from "react";
 import { createPortal } from "react-dom";
-import Map from "ol/Map";
-import View from "ol/View";
-import TileLayer from "ol/layer/Tile";
-import VectorLayer from "ol/layer/Vector";
-import VectorSource from "ol/source/Vector";
-import OSM from "ol/source/OSM";
-import XYZ from "ol/source/XYZ";
-import GeoJSON from "ol/format/GeoJSON";
-import { Style, Fill, Stroke } from "ol/style";
-import type { StyleLike } from "ol/style/Style";
+
+// OpenLayers imports optimization - using specific submodules
+import Map from 'ol/Map.js';
+import View from 'ol/View.js';
+import TileLayer from 'ol/layer/Tile.js';
+import VectorLayer from 'ol/layer/Vector.js';
+import VectorSource from 'ol/source/Vector.js';
+import OSM from 'ol/source/OSM.js';
+import XYZ from 'ol/source/XYZ.js';
+import GeoJSON from 'ol/format/GeoJSON.js';
+import { Fill, Stroke, Style } from 'ol/style.js';
+import type { StyleLike } from 'ol/style/Style.js';
+import type { FeatureLike } from 'ol/Feature.js';
+import Feature from 'ol/Feature.js';
+import { Geometry } from 'ol/geom.js';
+import Polygon from 'ol/geom/Polygon.js';
+import Overlay from 'ol/Overlay.js';
+
 import type {
   ColorScale,
   GeoJSONFeatureCollection,
   OverlayOptions,
   LegendPosition,
 } from "../types/map";
-import type { FeatureLike } from "ol/Feature";
 import useColorScale from "../hooks/useColorScale";
 import Legend from "./Legend";
-import { Geometry } from "ol/geom";
-import Feature from "ol/Feature";
-import Polygon from "ol/geom/Polygon";
 import chroma from "chroma-js";
-import Overlay from "ol/Overlay";
 import "../styles/choropleth.css";
 
 const generateOverlayContent = (feature: FeatureLike) => {
