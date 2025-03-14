@@ -63,6 +63,17 @@ interface ExtendedChoroplethMapProps extends BaseChoroplethMapProps {
   legendClassName?: string;
 }
 
+// Debounce helper with proper cleanup
+const debounce = (fn: Function, ms = 300) => {
+  let timeoutId: ReturnType<typeof setTimeout>;
+  const debouncedFn = function (this: any, ...args: any[]) {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn.apply(this, args), ms);
+  };
+  debouncedFn.cancel = () => clearTimeout(timeoutId);
+  return debouncedFn;
+};
+
 const ChoroplethMap = ({
   data,
   valueProperty,
@@ -276,6 +287,8 @@ const ChoroplethMap = ({
     mapInstanceRef.current = map;
 
     // Set up overlay if enabled
+    let updateOverlayPosition: ReturnType<typeof debounce> | null = null;
+
     if (overlayOptions) {
       try {
         const container = document.createElement("div");
@@ -284,8 +297,8 @@ const ChoroplethMap = ({
 
         const overlayInstance = new Overlay({
           element: container,
-          positioning: "center-center",
-          offset: [0, 0],
+          positioning: overlayOptions.positioning || "bottom-center",
+          offset: overlayOptions.offset || [0, -10],
           stopEvent: false,
           className: "react-ol-choropleth__overlay-wrapper",
           autoPan: overlayOptions.autoPan !== false,
@@ -294,22 +307,20 @@ const ChoroplethMap = ({
         overlayRef.current = overlayInstance;
         map.addOverlay(overlayInstance);
 
-        // Update overlay position on view change
-        const updateOverlayPosition = () => {
-          if (selectedFeatureRef.current) {
+        // Update overlay position on view change with optimized debounce
+        updateOverlayPosition = debounce(() => {
+          if (selectedFeatureRef.current && overlayRef.current) {
             const geometry = selectedFeatureRef.current.getGeometry();
             if (geometry instanceof Polygon) {
               const extent = geometry.getExtent();
               const position = [(extent[0] + extent[2]) / 2, extent[3]];
-              requestAnimationFrame(() => {
-                overlayInstance.setPosition(position);
-              });
+              overlayRef.current.setPosition(position);
             }
           }
-        };
+        }, 150);
 
-        view.on("change:resolution", updateOverlayPosition);
-        view.on("change:center", updateOverlayPosition);
+        // Only update during interaction end
+        map.on("moveend", updateOverlayPosition);
       } catch (error) {
         console.error("Error setting up overlay:", error);
       }
@@ -319,37 +330,51 @@ const ChoroplethMap = ({
     const clickListener = (event: any) => handleFeatureClick(event, map);
     map.on("click", clickListener);
 
+    // Set up hover handler
+    let hoverListener: ((event: any) => void) | undefined;
     if (onFeatureHover) {
-      map.on("pointermove", (event) => {
+      hoverListener = (event) => {
         const feature = map.forEachFeatureAtPixel(
           event.pixel,
           (feature) => feature
         );
         onFeatureHover(feature || null);
-      });
+      };
+      map.on("pointermove", hoverListener);
     }
 
     return () => {
-      try {
-        if (overlayRef.current) {
-          map.removeOverlay(overlayRef.current);
-        }
-        overlayRef.current = null;
-        overlayContainerRef.current = null;
-        map.dispose();
-      } catch (error) {
-        console.error("Error cleaning up map:", error);
+      // Clean up all event listeners and timeouts
+      if (updateOverlayPosition) {
+        updateOverlayPosition.cancel();
+        map.un("moveend", updateOverlayPosition);
       }
+
+      map.un("click", clickListener);
+      if (hoverListener) {
+        map.un("pointermove", hoverListener);
+      }
+
+      if (overlayRef.current) {
+        map.removeOverlay(overlayRef.current);
+        overlayRef.current = null;
+      }
+      if (overlayContainerRef.current) {
+        overlayContainerRef.current.remove();
+        overlayContainerRef.current = null;
+      }
+
+      map.dispose();
     };
   }, [
     vectorSource,
     style,
     styleFunction,
     baseMap,
+    overlayOptions,
     handleFeatureClick,
     onFeatureHover,
     zoom,
-    overlayOptions,
   ]);
 
   const values = useMemo(() => {
