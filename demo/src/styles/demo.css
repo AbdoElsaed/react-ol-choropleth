@@ -48,3 +48,32 @@ body {
   color: #6baed6;
   margin-right: 8px;
 }
+
+/* Mobile Responsive Styles */
+@media screen and (max-width: 768px) {
+  .app {
+    flex-direction: column;
+  }
+
+  .map-container {
+    height: 60vh;
+    width: 100%;
+  }
+}
+
+/* Small mobile devices */
+@media screen and (max-width: 480px) {
+  .map-container {
+    height: 50vh;
+  }
+
+  .demo-choropleth .react-ol-choropleth__legend {
+    max-width: calc(100% - 20px);
+    font-size: 0.9em;
+  }
+
+  .demo-choropleth .react-ol-choropleth__overlay {
+    max-width: 250px;
+    font-size: 0.9em;
+  }
+}

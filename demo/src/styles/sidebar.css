@@ -110,4 +110,67 @@
 
 .show-code-button:hover {
   background-color: #2171b5;
+}
+
+/* Mobile Responsive Styles */
+@media screen and (max-width: 768px) {
+  .sidebar {
+    width: 100%;
+    min-width: 100%;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid #3d3d3d;
+  }
+
+  .controls-panel {
+    padding: 15px;
+    max-height: 40vh;
+  }
+
+  .github-link {
+    height: 50px;
+  }
+
+  .control-row {
+    padding: 12px;
+    margin-bottom: 15px;
+  }
+
+  .actions-row {
+    flex-wrap: wrap;
+  }
+
+  .show-code-button {
+    flex: 1;
+    min-width: 120px;
+    text-align: center;
+  }
+}
+
+/* Small mobile devices */
+@media screen and (max-width: 480px) {
+  .controls-panel {
+    padding: 10px;
+  }
+
+  .control-row {
+    padding: 10px;
+    margin-bottom: 10px;
+  }
+
+  .control-item label {
+    font-size: 0.85rem;
+  }
+
+  .control-item select,
+  .control-item input[type="number"],
+  .control-item textarea {
+    font-size: 0.85rem;
+    padding: 6px 10px;
+  }
+
+  .checkbox-group input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+  }
 } 
