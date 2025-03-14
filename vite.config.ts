@@ -27,26 +27,41 @@ export default defineConfig({
         'react',
         'react-dom',
         'react/jsx-runtime',
-        'ol'
+        'ol',
+        'chroma-js'
       ],
       output: {
         globals: {
           react: "React",
           "react-dom": "ReactDOM",
           "react/jsx-runtime": "jsxRuntime",
-          ol: "ol"
+          ol: "ol",
+          "chroma-js": "chroma"
         },
-        assetFileNames: 'style.css'
+        assetFileNames: 'style.css',
+        manualChunks: undefined,
+        inlineDynamicImports: false,
+        compact: true
       },
     },
     minify: 'terser',
     terserOptions: {
       compress: {
         drop_console: true,
-        drop_debugger: true
+        drop_debugger: true,
+        pure_funcs: ['console.log', 'console.info', 'console.debug', 'console.warn'],
+        passes: 2
+      },
+      mangle: {
+        properties: false
+      },
+      format: {
+        comments: false
       }
     },
-    cssCodeSplit: false
+    cssCodeSplit: false,
+    reportCompressedSize: true,
+    chunkSizeWarningLimit: 500
   },
   server: {
     open: true
