@@ -51,6 +51,9 @@ function App() {
     useState("#0099ff");
   const [valueProperty, setValueProperty] = useState("density");
   const [customGeoJSON, setCustomGeoJSON] = useState("");
+  const [overlayTrigger, setOverlayTrigger] = useState<"click" | "hover">(
+    "click"
+  );
 
   const currentData = useMemo(() => {
     try {
@@ -98,6 +101,8 @@ const YourComponent = () => {
       selectedFeatureBorderColor="${selectedFeatureBorderColor}"
       canZoomOutBoundaries={${canZoomOutBoundaries}}
       overlayOptions={{
+        trigger: "${overlayTrigger}",
+        autoPan: true,
         // Optional custom render function
         render: (feature) => (
           <div>
@@ -105,7 +110,6 @@ const YourComponent = () => {
             <p>{feature.get("${valueProperty}")}</p>
           </div>
         ),
-        autoPan: true, // Auto pan map to show overlay
       }}
     />
   );
@@ -145,6 +149,8 @@ const YourComponent = () => {
           currentData={currentData}
           canZoomOutBoundaries={canZoomOutBoundaries}
           setCanZoomOutBoundaries={setCanZoomOutBoundaries}
+          overlayTrigger={overlayTrigger}
+          setOverlayTrigger={setOverlayTrigger}
         />
 
         <div className="map-container">
@@ -165,6 +171,7 @@ const YourComponent = () => {
             className="demo-choropleth"
             overlayOptions={{
               autoPan: true,
+              trigger: overlayTrigger,
             }}
           />
         </div>

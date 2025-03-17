@@ -93,6 +93,7 @@ const ChoroplethMap = ({
     positioning: "bottom-center",
     offset: [0, -10],
     autoPan: true,
+    trigger: "click",
   },
   zoomToFeature = false,
   selectedFeatureBorderColor = "#0099ff",
@@ -108,6 +109,7 @@ const ChoroplethMap = ({
   const overlayContainerRef = useRef<HTMLDivElement | null>(null);
   const [features, setFeatures] = useState<Feature<Geometry>[]>([]);
   const selectedFeatureRef = useRef<FeatureLike | null>(null);
+  const hoveredFeatureRef = useRef<FeatureLike | null>(null);
   const vectorLayerRef = useRef<VectorLayer<
     VectorSource<Feature<Geometry>>
   > | null>(null);
@@ -145,6 +147,7 @@ const ChoroplethMap = ({
       const color = getColor(Number(value));
       const rgb = color === "#cccccc" ? [204, 204, 204] : chroma(color).rgb();
       const isSelected = feature === selectedFeatureRef.current;
+      const isHovered = feature === hoveredFeatureRef.current;
       const selectedColor = chroma(selectedFeatureBorderColor).rgb();
 
       return new Style({
@@ -152,43 +155,39 @@ const ChoroplethMap = ({
           color: [...rgb, 0.8],
         }),
         stroke: new Stroke({
-          color: isSelected ? [...selectedColor, 1] : [61, 61, 61, 1],
-          width: isSelected ? 3 : 1,
+          color:
+            isSelected || isHovered ? [...selectedColor, 1] : [61, 61, 61, 1],
+          width: isSelected ? 3 : isHovered ? 2 : 1,
         }),
       });
     },
     [getColor, valueProperty, selectedFeatureBorderColor]
   );
 
-  // Handle feature click
-  const handleFeatureClick = useCallback(
-    (event: any, map: Map) => {
-      const clickedFeature = map.forEachFeatureAtPixel(
-        event.pixel,
-        (feature) => feature
-      );
+  // Handle showing overlay
+  const showOverlay = useCallback(
+    (feature: FeatureLike | null, coordinate?: [number, number]) => {
+      if (
+        feature &&
+        overlayRef.current &&
+        overlayContainerRef.current &&
+        overlayOptions
+      ) {
+        try {
+          const content = overlayOptions.render
+            ? overlayOptions.render(feature)
+            : generateOverlayContent(feature);
 
-      selectedFeatureRef.current = clickedFeature || null;
+          setOverlayContent(content);
 
-      if (clickedFeature) {
-        const geometry = clickedFeature.getGeometry();
-        if (
-          geometry instanceof Polygon &&
-          overlayRef.current &&
-          overlayContainerRef.current &&
-          overlayOptions
-        ) {
-          try {
-            // Set overlay content using React
-            const content = overlayOptions.render
-              ? overlayOptions.render(clickedFeature)
-              : generateOverlayContent(clickedFeature);
-
-            setOverlayContent(content);
-
-            // Get the top center coordinate of the feature
+          // Get the top center coordinate of the feature
+          const geometry = feature.getGeometry();
+          if (geometry instanceof Polygon) {
             const extent = geometry.getExtent();
-            const position = [(extent[0] + extent[2]) / 2, extent[3]];
+            const position = coordinate || [
+              (extent[0] + extent[2]) / 2,
+              extent[3],
+            ];
 
             // Set position after content update
             requestAnimationFrame(() => {
@@ -196,40 +195,60 @@ const ChoroplethMap = ({
                 overlayRef.current.setPosition(position);
               }
             });
-
-            if (onFeatureClick) {
-              onFeatureClick(clickedFeature, position as [number, number]);
-            }
-
-            if (zoomToFeature && mapInstanceRef.current) {
-              const view = mapInstanceRef.current.getView();
-              const resolution = view.getResolutionForExtent(
-                extent,
-                mapInstanceRef.current.getSize() || undefined
-              );
-              const zoom = view.getZoomForResolution(resolution || 1);
-
-              view.animate({
-                center: position,
-                zoom: zoom ? Math.min(zoom + 0.5, 6) : 6,
-                duration: 500,
-              });
-            }
-          } catch (error) {
-            console.error("Error updating overlay:", error);
-            overlayRef.current.setPosition(undefined);
-            setOverlayContent(null);
           }
-        }
-      } else {
-        // Hide overlay when no feature is selected
-        if (overlayRef.current) {
+        } catch (error) {
+          console.error("Error updating overlay:", error);
           overlayRef.current.setPosition(undefined);
           setOverlayContent(null);
         }
+      } else if (overlayRef.current) {
+        overlayRef.current.setPosition(undefined);
+        setOverlayContent(null);
+      }
+    },
+    [overlayOptions]
+  );
+
+  // Handle feature click
+  const handleFeatureClick = useCallback(
+    (event: any, map: Map) => {
+      const clickedFeature =
+        map.forEachFeatureAtPixel(event.pixel, (feature) => feature) || null;
+
+      selectedFeatureRef.current = clickedFeature;
+
+      // Show overlay if trigger is click
+      if (overlayOptions && overlayOptions.trigger === "click") {
+        showOverlay(clickedFeature);
+      }
+
+      if (clickedFeature) {
         if (onFeatureClick) {
-          onFeatureClick(null);
+          const coordinate = map.getCoordinateFromPixel(event.pixel);
+          onFeatureClick(clickedFeature, coordinate as [number, number]);
         }
+
+        if (zoomToFeature && mapInstanceRef.current) {
+          const geometry = clickedFeature.getGeometry();
+          if (geometry instanceof Polygon) {
+            const extent = geometry.getExtent();
+            const view = mapInstanceRef.current.getView();
+            const resolution = view.getResolutionForExtent(
+              extent,
+              mapInstanceRef.current.getSize() || undefined
+            );
+            const zoom = view.getZoomForResolution(resolution || 1);
+            const position = [(extent[0] + extent[2]) / 2, extent[3]];
+
+            view.animate({
+              center: position,
+              zoom: zoom ? Math.min(zoom + 0.5, 6) : 6,
+              duration: 500,
+            });
+          }
+        }
+      } else if (onFeatureClick) {
+        onFeatureClick(null);
       }
 
       // Force vector layer to refresh styles
@@ -237,7 +256,37 @@ const ChoroplethMap = ({
         vectorLayerRef.current.changed();
       }
     },
-    [onFeatureClick, zoomToFeature, overlayOptions]
+    [onFeatureClick, zoomToFeature, overlayOptions, showOverlay]
+  );
+
+  // Handle feature hover
+  const handleFeatureHover = useCallback(
+    (event: any, map: Map) => {
+      const hoveredFeature =
+        event.type === "pointermove"
+          ? map.forEachFeatureAtPixel(event.pixel, (feature) => feature) || null
+          : null;
+
+      hoveredFeatureRef.current = hoveredFeature;
+
+      // Show overlay if trigger is hover
+      if (overlayOptions && overlayOptions.trigger === "hover") {
+        const coordinate = hoveredFeature
+          ? map.getCoordinateFromPixel(event.pixel)
+          : undefined;
+        showOverlay(hoveredFeature, coordinate as [number, number]);
+      }
+
+      if (onFeatureHover) {
+        onFeatureHover(hoveredFeature);
+      }
+
+      // Force vector layer to refresh styles
+      if (vectorLayerRef.current) {
+        vectorLayerRef.current.changed();
+      }
+    },
+    [onFeatureHover, overlayOptions, showOverlay]
   );
 
   // Effect for initial map setup
@@ -354,17 +403,8 @@ const ChoroplethMap = ({
     map.on("click", clickListener);
 
     // Set up hover handler
-    let hoverListener: ((event: any) => void) | undefined;
-    if (onFeatureHover) {
-      hoverListener = (event) => {
-        const feature = map.forEachFeatureAtPixel(
-          event.pixel,
-          (feature) => feature
-        );
-        onFeatureHover(feature || null);
-      };
-      map.on("pointermove", hoverListener);
-    }
+    const hoverListener = (event: any) => handleFeatureHover(event, map);
+    map.on("pointermove", hoverListener);
 
     return () => {
       // Clean up all event listeners and timeouts
@@ -374,9 +414,7 @@ const ChoroplethMap = ({
       }
 
       map.un("click", clickListener);
-      if (hoverListener) {
-        map.un("pointermove", hoverListener);
-      }
+      map.un("pointermove", hoverListener);
 
       if (overlayRef.current) {
         map.removeOverlay(overlayRef.current);
@@ -396,7 +434,7 @@ const ChoroplethMap = ({
     baseMap,
     overlayOptions,
     handleFeatureClick,
-    onFeatureHover,
+    handleFeatureHover,
     zoom,
     canZoomOutBoundaries,
   ]);

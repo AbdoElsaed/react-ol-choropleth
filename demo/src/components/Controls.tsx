@@ -32,6 +32,8 @@ interface ControlsProps {
   currentData: any;
   canZoomOutBoundaries: boolean;
   setCanZoomOutBoundaries: (can: boolean) => void;
+  overlayTrigger: "click" | "hover";
+  setOverlayTrigger: (trigger: "click" | "hover") => void;
 }
 
 const Controls = memo(
@@ -65,6 +67,8 @@ const Controls = memo(
     currentData,
     canZoomOutBoundaries,
     setCanZoomOutBoundaries,
+    overlayTrigger,
+    setOverlayTrigger,
   }: ControlsProps) => {
     const { openCodeModal } = useModal();
 
@@ -284,6 +288,21 @@ const Controls = memo(
                 <option value="osm">OpenStreetMap</option>
                 <option value="satellite">Satellite</option>
                 <option value="none">None</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="control-row">
+            <div className="control-item">
+              <label>Overlay Trigger:</label>
+              <select
+                value={overlayTrigger}
+                onChange={(e) =>
+                  setOverlayTrigger(e.target.value as "click" | "hover")
+                }
+              >
+                <option value="click">Click</option>
+                <option value="hover">Hover</option>
               </select>
             </div>
           </div>

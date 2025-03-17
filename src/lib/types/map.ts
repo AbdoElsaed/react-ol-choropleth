@@ -7,6 +7,8 @@ export type LegendPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-
 
 export type ColorScaleType = 'sequential' | 'diverging' | 'categorical';
 
+export type OverlayTrigger = "click" | "hover";
+
 export interface ColorScale {
     type: ColorScaleType;
     colors: string[];
@@ -61,6 +63,11 @@ export interface OverlayOptions {
     render?: (feature: FeatureLike) => React.ReactNode;
 
     /**
+     * When to show the overlay
+     */
+    trigger: OverlayTrigger;
+
+    /**
      * Positioning of the overlay relative to the feature
      */
     positioning?: Positioning;
@@ -103,7 +110,7 @@ export interface ChoroplethMapProps {
     /** Position of the legend */
     legendPosition?: LegendPosition;
     /** Options for the feature overlay */
-    overlayOptions?: OverlayOptions | false;
+    overlayOptions?: OverlayOptions;
     /** Whether to zoom to a feature when clicked */
     zoomToFeature?: boolean;
     /** Border color for selected features */
