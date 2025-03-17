@@ -46,6 +46,7 @@ function App() {
     useState<LegendPosition>("top-right");
   const [baseMap, setBaseMap] = useState<"osm" | "satellite" | "none">("osm");
   const [zoomToFeature, setZoomToFeature] = useState(true);
+  const [canZoomOutBoundaries, setCanZoomOutBoundaries] = useState(true);
   const [selectedFeatureBorderColor, setSelectedFeatureBorderColor] =
     useState("#0099ff");
   const [valueProperty, setValueProperty] = useState("density");
@@ -95,6 +96,7 @@ const YourComponent = () => {
       baseMap="${baseMap}"
       zoomToFeature={${zoomToFeature}}
       selectedFeatureBorderColor="${selectedFeatureBorderColor}"
+      canZoomOutBoundaries={${canZoomOutBoundaries}}
       overlayOptions={{
         // Optional custom render function
         render: (feature) => (
@@ -141,6 +143,8 @@ const YourComponent = () => {
           setValueProperty={setValueProperty}
           availableProperties={availableProperties}
           currentData={currentData}
+          canZoomOutBoundaries={canZoomOutBoundaries}
+          setCanZoomOutBoundaries={setCanZoomOutBoundaries}
         />
 
         <div className="map-container">
@@ -157,6 +161,7 @@ const YourComponent = () => {
             baseMap={baseMap}
             zoomToFeature={zoomToFeature}
             selectedFeatureBorderColor={selectedFeatureBorderColor}
+            canZoomOutBoundaries={canZoomOutBoundaries}
             className="demo-choropleth"
             overlayOptions={{
               autoPan: true,

@@ -108,6 +108,8 @@ export interface ChoroplethMapProps {
     zoomToFeature?: boolean;
     /** Border color for selected features */
     selectedFeatureBorderColor?: string;
+    /** Whether users can zoom out beyond the GeoJSON boundaries (true) or are restricted to the data extent (false) */
+    canZoomOutBoundaries?: boolean;
     /** Callback when a feature is clicked */
     onFeatureClick?: (feature: FeatureLike | null, coordinate?: [number, number]) => void;
     /** Callback when hovering over a feature */

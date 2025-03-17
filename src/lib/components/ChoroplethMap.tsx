@@ -2,21 +2,21 @@ import { useEffect, useRef, useState, useMemo, memo, useCallback } from "react";
 import { createPortal } from "react-dom";
 
 // OpenLayers imports optimization - using specific submodules
-import Map from 'ol/Map.js';
-import View from 'ol/View.js';
-import TileLayer from 'ol/layer/Tile.js';
-import VectorLayer from 'ol/layer/Vector.js';
-import VectorSource from 'ol/source/Vector.js';
-import OSM from 'ol/source/OSM.js';
-import XYZ from 'ol/source/XYZ.js';
-import GeoJSON from 'ol/format/GeoJSON.js';
-import { Fill, Stroke, Style } from 'ol/style.js';
-import type { StyleLike } from 'ol/style/Style.js';
-import type { FeatureLike } from 'ol/Feature.js';
-import Feature from 'ol/Feature.js';
-import { Geometry } from 'ol/geom.js';
-import Polygon from 'ol/geom/Polygon.js';
-import Overlay from 'ol/Overlay.js';
+import Map from "ol/Map.js";
+import View from "ol/View.js";
+import TileLayer from "ol/layer/Tile.js";
+import VectorLayer from "ol/layer/Vector.js";
+import VectorSource from "ol/source/Vector.js";
+import OSM from "ol/source/OSM.js";
+import XYZ from "ol/source/XYZ.js";
+import GeoJSON from "ol/format/GeoJSON.js";
+import { Fill, Stroke, Style } from "ol/style.js";
+import type { StyleLike } from "ol/style/Style.js";
+import type { FeatureLike } from "ol/Feature.js";
+import Feature from "ol/Feature.js";
+import { Geometry } from "ol/geom.js";
+import Polygon from "ol/geom/Polygon.js";
+import Overlay from "ol/Overlay.js";
 
 import type {
   ColorScale,
@@ -58,6 +58,7 @@ type BaseChoroplethMapProps = {
   overlayOptions?: OverlayOptions | false;
   zoomToFeature?: boolean;
   selectedFeatureBorderColor?: string;
+  canZoomOutBoundaries?: boolean;
 };
 
 interface ExtendedChoroplethMapProps extends BaseChoroplethMapProps {
@@ -95,6 +96,7 @@ const ChoroplethMap = ({
   },
   zoomToFeature = false,
   selectedFeatureBorderColor = "#0099ff",
+  canZoomOutBoundaries = true,
   className = "",
   mapClassName = "",
   legendClassName = "",
@@ -268,9 +270,28 @@ const ChoroplethMap = ({
     }
 
     const layers = [...baseLayers, vectorLayer];
+    const extent = vectorSource.getExtent();
 
+    // Calculate the minimum zoom level that fits the data extent
+    const size = mapRef.current.getBoundingClientRect();
+    const minResolution = Math.max(
+      (extent[2] - extent[0]) / size.width,
+      (extent[3] - extent[1]) / size.height
+    );
+    const minZoom = Math.floor(
+      Math.log2(156543.03392804097) - Math.log2(minResolution)
+    );
+
+    // Create view with zoom constraints when canZoomOutBoundaries is false
     const view = new View({
       projection: "EPSG:3857",
+      ...(canZoomOutBoundaries
+        ? {}
+        : {
+            extent,
+            minZoom: Math.max(minZoom - 1, 0), // Subtract 1 to give a little extra room
+            constrainOnlyCenter: false,
+          }),
     });
 
     const map = new Map({
@@ -280,7 +301,6 @@ const ChoroplethMap = ({
     });
 
     // Fit view to the extent on initial load
-    const extent = vectorSource.getExtent();
     view.fit(extent, {
       padding: [50, 50, 50, 50],
       maxZoom: zoom || undefined,
@@ -378,6 +398,7 @@ const ChoroplethMap = ({
     handleFeatureClick,
     onFeatureHover,
     zoom,
+    canZoomOutBoundaries,
   ]);
 
   const values = useMemo(() => {

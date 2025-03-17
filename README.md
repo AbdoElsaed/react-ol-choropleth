@@ -34,13 +34,14 @@ function App() {
       }}
       // Map configuration
       zoom={4}
-      baseMap="osm" // 'osm' | 'none'
+      baseMap="osm" // 'osm' | 'satellite' | 'none'
       // Legend configuration
       showLegend={true}
       legendPosition="top-right" // 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left'
       // Interaction options
       zoomToFeature={true}
       selectedFeatureBorderColor="#0099ff"
+      canZoomOutBoundaries={true} // Whether to allow zooming beyond data boundaries
       // Custom overlay configuration (optional)
       overlayOptions={{
         // Custom render function (optional)
@@ -83,9 +84,10 @@ function App() {
 | `zoom`                       | `number`                                                            | Initial zoom level                           | `2`           |
 | `showLegend`                 | `boolean`                                                           | Whether to show the legend                   | `true`        |
 | `legendPosition`             | `LegendPosition`                                                    | Legend position                              | `"top-right"` |
-| `baseMap`                    | `"osm" \| "none"`                                                   | Base map layer type                          | `"osm"`       |
+| `baseMap`                    | `"osm" \| "satellite" \| "none"`                                    | Base map layer type                          | `"osm"`       |
 | `zoomToFeature`              | `boolean`                                                           | Auto-zoom on feature click                   | `false`       |
 | `selectedFeatureBorderColor` | `string`                                                            | Selected feature highlight color             | `"#0099ff"`   |
+| `canZoomOutBoundaries`        | `boolean`                                                           | Allow zooming beyond data boundaries         | `true`        |
 | `overlayOptions`             | `OverlayOptions \| false`                                           | Custom overlay configuration                 | See below     |
 | `onFeatureClick`             | `(feature: Feature \| null, coordinate?: [number, number]) => void` | Click event handler                          | -             |
 | `onFeatureHover`             | `(feature: Feature \| null) => void`                                | Hover event handler                          | -             |

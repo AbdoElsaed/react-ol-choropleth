@@ -30,6 +30,8 @@ interface ControlsProps {
   setValueProperty: (property: string) => void;
   availableProperties: string[];
   currentData: any;
+  canZoomOutBoundaries: boolean;
+  setCanZoomOutBoundaries: (can: boolean) => void;
 }
 
 const Controls = memo(
@@ -61,6 +63,8 @@ const Controls = memo(
     setValueProperty,
     availableProperties,
     currentData,
+    canZoomOutBoundaries,
+    setCanZoomOutBoundaries,
   }: ControlsProps) => {
     const { openCodeModal } = useModal();
 
@@ -273,12 +277,30 @@ const Controls = memo(
               <label>Base Map:</label>
               <select
                 value={baseMap}
-                onChange={(e) => setBaseMap(e.target.value as "osm" | "satellite" | "none")}
+                onChange={(e) =>
+                  setBaseMap(e.target.value as "osm" | "satellite" | "none")
+                }
               >
                 <option value="osm">OpenStreetMap</option>
                 <option value="satellite">Satellite</option>
                 <option value="none">None</option>
               </select>
+            </div>
+          </div>
+
+          <div className="control-row">
+            <div className="control-item">
+              <div className="checkbox-group">
+                <input
+                  type="checkbox"
+                  id="canZoomOutBoundaries"
+                  checked={canZoomOutBoundaries}
+                  onChange={(e) => setCanZoomOutBoundaries(e.target.checked)}
+                />
+                <label htmlFor="canZoomOutBoundaries">
+                  Allow Zooming Beyond Boundaries
+                </label>
+              </div>
             </div>
           </div>
         </div>
