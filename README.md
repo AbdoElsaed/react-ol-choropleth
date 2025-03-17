@@ -40,10 +40,12 @@ function App() {
       legendPosition="top-right" // 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left'
       // Interaction options
       zoomToFeature={true}
-      selectedFeatureBorderColor="#0099ff"
+      selectedFeatureBorderColor="#0099ff" // Color for highlighting selected/hovered features
       canZoomOutBoundaries={true} // Whether to allow zooming beyond data boundaries
       // Custom overlay configuration (optional)
       overlayOptions={{
+        // When to show the overlay: 'click' or 'hover'
+        trigger: "click",
         // Custom render function (optional)
         render: (feature) => (
           <div>
@@ -52,7 +54,7 @@ function App() {
           </div>
         ),
         // If render is not provided, it will show all feature properties by default
-        autoPan: true, // Auto pan map to show overlay when feature is clicked
+        autoPan: true, // Auto pan map to show overlay when feature is clicked/hovered
       }}
       // Event handlers
       onFeatureClick={(feature, coordinate) => {
@@ -86,8 +88,8 @@ function App() {
 | `legendPosition`             | `LegendPosition`                                                    | Legend position                              | `"top-right"` |
 | `baseMap`                    | `"osm" \| "satellite" \| "none"`                                    | Base map layer type                          | `"osm"`       |
 | `zoomToFeature`              | `boolean`                                                           | Auto-zoom on feature click                   | `false`       |
-| `selectedFeatureBorderColor` | `string`                                                            | Selected feature highlight color             | `"#0099ff"`   |
-| `canZoomOutBoundaries`        | `boolean`                                                           | Allow zooming beyond data boundaries         | `true`        |
+| `selectedFeatureBorderColor` | `string`                                                            | Selected/hovered feature highlight color     | `"#0099ff"`   |
+| `canZoomOutBoundaries`       | `boolean`                                                           | Allow zooming beyond data boundaries         | `true`        |
 | `overlayOptions`             | `OverlayOptions \| false`                                           | Custom overlay configuration                 | See below     |
 | `onFeatureClick`             | `(feature: Feature \| null, coordinate?: [number, number]) => void` | Click event handler                          | -             |
 | `onFeatureHover`             | `(feature: Feature \| null) => void`                                | Hover event handler                          | -             |
@@ -97,9 +99,19 @@ function App() {
 ```ts
 {
   render: undefined, // Will show all feature properties if not provided
+  trigger: "click", // "click" or "hover"
   autoPan: true,
 }
 ```
+
+### Feature Highlighting
+
+Features can be highlighted in two ways:
+
+1. On click - Selected features get a 3px border with the `selectedFeatureBorderColor`
+2. On hover - Hovered features get a 2px border with the same `selectedFeatureBorderColor`
+
+The overlay display is controlled by the `overlayOptions.trigger` property, which can be set to either `"click"` or `"hover"`.
 
 ## Demo
 
